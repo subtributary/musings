@@ -1,6 +1,9 @@
 # Musings
 Musings is a simple, low-maintenance, self-hostable publishing CMS for blog/news-style sites with first-class localization and a lightweight plugin mechanism.
 
+> [!NOTE]
+> Musing is still in version 0.*, so many of these features may not yet exist.
+
 ## Folder Structure
 
 ...

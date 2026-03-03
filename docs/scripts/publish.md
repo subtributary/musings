@@ -8,6 +8,8 @@ Syntax: `./scripts/publish.sh`
 
 ## Internal Flow
 
+// todo
+
 Build:
 1. Execute `./scripts/build.sh all`.
 2. If build fails, exit with error.
