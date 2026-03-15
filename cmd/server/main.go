@@ -10,20 +10,29 @@ import (
 )
 
 func main() {
-	config := app.NewConfig()
-
-	config.AssetsDir = os.Getenv("MUSINGS_ASSETS_DIR")
-	config.ContentDir = os.Getenv("MUSINGS_CONTENT_DIR")
-	config.WebEndpoint = os.Getenv("MUSINGS_WEB_ENDPOINT")
-
-	flag.StringVar(&config.WebEndpoint, "web-endpoint", config.WebEndpoint, "Web endpoint to listen at")
-	flag.Parse()
-
-	if _, err := config.IsSane(); err != nil {
+	config := loadConfig()
+	if sane, err := config.IsSane(); !sane {
 		log.Fatal(err)
 	}
 
-	server := app.NewServer(config)
-	fmt.Printf("Listening at %s\n", config.WebEndpoint)
+	server, err := app.NewServer(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	fmt.Printf("Listening at %s\n", config.BindAddress)
 	log.Fatal(server.ListenAndServe())
+}
+
+func loadConfig() *app.Config {
+	config := app.NewConfig()
+
+	config.BindAddress = os.Getenv("MUSINGS_BIND_ADDRESS")
+	config.ContentPath = os.Getenv("MUSINGS_CONTENT_PATH")
+	config.WebPath = os.Getenv("MUSINGS_WEB_PATH")
+
+	flag.StringVar(&config.BindAddress, "web-endpoint", config.BindAddress, "Web endpoint to listen at")
+	flag.Parse()
+
+	return config
 }

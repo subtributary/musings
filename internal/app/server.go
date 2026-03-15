@@ -1,39 +1,61 @@
 package app
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
-	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/subtributary/musings/internal/templates"
 )
 
-func NewServer(config *Config) *http.Server {
-	imagesDir := filepath.Join(config.ContentDir, "images")
+type Server struct {
+	config    *Config
+	router    *chi.Mux
+	templates *templates.Store
+}
 
-	mux := http.NewServeMux()
-	mux.Handle("/_content/images/", http.StripPrefix("/_content/images/", http.FileServer(http.Dir(imagesDir))))
+func NewServer(config *Config) (*Server, error) {
+	templatesStore, err := templates.NewStore(config.GetTemplatesPath())
+	if err != nil {
+		return nil, fmt.Errorf("error creating templates store: %w", err)
+	}
 
-	// Routes (todo)
-	// GET /_api/ - api
-	// GET /_assets/ - dist assets directory
-	// GET /_content/images - content images
-	// GET /loc/posts/1/slug - content markdown
-	// GET /loc/page - posts as custom routes
+	s := &Server{
+		config:    config,
+		router:    chi.NewRouter(),
+		templates: templatesStore,
+	}
 
-	handler := loggingMiddleware(mux)
+	s.router.Use(middleware.Logger)
 
-	return &http.Server{
-		Addr:         config.WebEndpoint,
-		Handler:      handler,
-		IdleTimeout:  120 * time.Second,
-		ReadTimeout:  120 * time.Second,
-		WriteTimeout: 120 * time.Second,
+	s.router.Get("/", s.getIndex)
+
+	return s, nil
+}
+
+func (s *Server) ListenAndServe() error {
+	return http.ListenAndServe(s.config.BindAddress, s.router)
+}
+
+func (s *Server) getIndex(w http.ResponseWriter, r *http.Request) {
+	const locale = "" // I'll set this next update.
+	template := s.templates.Lookup("pages/index", locale)
+	if template == nil {
+		log.Printf("no index template found for locale %s", locale)
+		http.NotFound(w, r)
+		return
+	}
+
+	err := template.Execute(w, nil)
+	if err != nil {
+		log.Printf("error executing template: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 	}
 }
 
-func loggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("%s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-	})
+func notImplemented(w http.ResponseWriter, r *http.Request) {
 }
+
+//
