@@ -17,7 +17,7 @@ type Server struct {
 }
 
 func NewServer(config *Config) (*Server, error) {
-	templatesStore, err := templates.NewStore(config.GetTemplatesPath())
+	templatesStore, err := templates.New(config.GetTemplatesPath())
 	if err != nil {
 		return nil, fmt.Errorf("error creating templates store: %w", err)
 	}
@@ -41,7 +41,7 @@ func (s *Server) ListenAndServe() error {
 
 func (s *Server) getIndex(w http.ResponseWriter, r *http.Request) {
 	const locale = "" // I'll set this next update.
-	template := s.templates.Lookup("pages/index", locale)
+	template := s.templates.Lookup("index", locale)
 	if template == nil {
 		log.Printf("no index template found for locale %s", locale)
 		http.NotFound(w, r)
