@@ -2,35 +2,38 @@ package app
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/subtributary/musings/internal/templates"
+	"github.com/subtributary/musings/internal/content"
 )
 
 type Server struct {
 	config    *Config
 	router    *chi.Mux
-	templates *templates.Store
+	templates *content.TemplateStore
+	markdown  *content.MarkdownStore
 }
 
 func NewServer(config *Config) (*Server, error) {
-	templatesStore, err := templates.New(config.GetTemplatesPath())
-	if err != nil {
-		return nil, fmt.Errorf("error creating templates store: %w", err)
-	}
-
 	s := &Server{
-		config:    config,
-		router:    chi.NewRouter(),
-		templates: templatesStore,
+		config: config,
 	}
 
-	s.router.Use(middleware.Logger)
+	s.templates = content.NewTemplateStore()
+	if err := s.templates.Load(config.GetTemplatesPath()); err != nil {
+		return nil, fmt.Errorf("could not load templates: %w", err)
+	}
 
+	s.markdown = content.NewMarkdownStore(config.ContentPath)
+
+	s.router = chi.NewRouter()
+	s.router.Use(middleware.Logger)
 	s.router.Get("/", s.getIndex)
+	s.router.Get("/*", s.getPost)
 
 	return s, nil
 }
@@ -55,7 +58,24 @@ func (s *Server) getIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func notImplemented(w http.ResponseWriter, r *http.Request) {
-}
+func (s *Server) getPost(w http.ResponseWriter, r *http.Request) {
+	const locale = "" // I'll set this next update.
 
-//
+	path := chi.URLParam(r, "*")
+	if !fs.ValidPath(path) {
+		http.NotFound(w, r)
+		return
+	}
+
+	filePath, err := s.markdown.Find(path, locale)
+	if err != nil {
+		log.Printf("error finding markdown file: %v", err)
+		http.NotFound(w, r)
+		return
+	}
+
+	if err := s.markdown.Render(w, filePath); err != nil {
+		log.Printf("error rendering markdown file: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+}
