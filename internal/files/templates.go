@@ -1,11 +1,10 @@
-package content
+package files
 
 import (
 	"fmt"
 	"html/template"
 	"log"
 	"os"
-	"path/filepath"
 )
 
 type TemplateStore struct {
@@ -22,11 +21,17 @@ func (s *TemplateStore) Load(path string) error {
 	// todo: pass this in from somewhere
 	locales := []string{"en", ""}
 
-	pageFiles, err := scan(path, ".gohtml")
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return fmt.Errorf("open root %q: %w", path, err)
+	}
+	defer func() { _ = root.Close() }()
+
+	pageFiles, err := scan(root, ".", ".gohtml")
 	if err != nil {
 		return fmt.Errorf("could not scan pages: %w", err)
 	}
-	partialFiles, err := scan(filepath.Join(path, "partials"), ".gohtml")
+	partialFiles, err := scan(root, "partials", ".gohtml")
 	if err != nil {
 		return fmt.Errorf("could not scan partials: %w", err)
 	}
@@ -38,7 +43,7 @@ func (s *TemplateStore) Load(path string) error {
 			if err != nil {
 				return fmt.Errorf("could not resolve template %s: %w", name, err)
 			}
-			if err := s.addTemplate(locale, name, filePath); err != nil {
+			if err := s.addTemplate(root, locale, name, filePath); err != nil {
 				return err
 			}
 		}
@@ -49,7 +54,7 @@ func (s *TemplateStore) Load(path string) error {
 				log.Printf("could not resolve template %s for locale %s", name, locale)
 				continue
 			}
-			if err := s.addTemplate(locale, "partials/"+name, filePath); err != nil {
+			if err := s.addTemplate(root, locale, "partials/"+name, filePath); err != nil {
 				return err
 			}
 		}
@@ -73,8 +78,8 @@ func (s *TemplateStore) Lookup(name string, locale string) *template.Template {
 	return nil
 }
 
-func (s *TemplateStore) addTemplate(locale string, name string, filePath string) error {
-	contents, err := os.ReadFile(filePath)
+func (s *TemplateStore) addTemplate(root *os.Root, locale string, name string, filePath string) error {
+	contents, err := root.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("could not read template %s: %w", filePath, err)
 	}

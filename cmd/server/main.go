@@ -19,7 +19,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+	defer server.Dispose()
+
 	fmt.Printf("Listening at %s\n", config.BindAddress)
 	log.Fatal(server.ListenAndServe())
 }

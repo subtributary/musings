@@ -1,4 +1,4 @@
-package content
+package files
 
 import (
 	"fmt"
@@ -25,8 +25,14 @@ func findBestVariant(variants map[string]string, locale string) (string, error) 
 // scan finds files and returns a map of name and locale to file path.
 // Files must be named like "{name}.{ext}" or "{name}.{locale}.{ext}".
 // The locale, if specified is lowercased.
-func scan(path string, ext string) (map[string]map[string]string, error) {
-	files, err := os.ReadDir(path)
+func scan(root *os.Root, path string, ext string) (map[string]map[string]string, error) {
+	dirFile, err := root.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read dir: %w", err)
+	}
+	defer func() { _ = dirFile.Close() }()
+
+	files, err := dirFile.ReadDir(-1)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read dir: %w", err)
 	}
