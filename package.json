@@ -1,0 +1,14 @@
+{
+  "name": "musings-web-assets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Build pipeline for SCSS (and optional JS/TS later)",
+  "scripts": {
+    "build:css": "sass --load-path=node_modules web/src/scss:web/static/css --no-source-map",
+    "build": "npm run build:css"
+  },
+  "devDependencies": {
+    "@picocss/pico": "^2.1.1",
+    "sass": "^1.77.0"
+  }
+}

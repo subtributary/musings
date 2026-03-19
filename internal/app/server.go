@@ -37,6 +37,7 @@ func NewServer(config *Config) (*Server, error) {
 
 	s.router.Use(middleware.Logger)
 	s.router.Get("/", s.getIndex)
+	s.router.Get("/_static/*", s.getStaticAsset)
 	s.router.Get("/*", s.getPost)
 
 	return s, nil
@@ -98,4 +99,10 @@ func (s *Server) getPost(w http.ResponseWriter, r *http.Request) {
 		log.Printf("error executing template: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
+}
+
+func (s *Server) getStaticAsset(w http.ResponseWriter, r *http.Request) {
+	staticDir := http.Dir(s.config.GetStaticPath())
+	fs := http.StripPrefix("/_static/", http.FileServer(staticDir))
+	fs.ServeHTTP(w, r)
 }
