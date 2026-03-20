@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	BindAddress string // Address to listen at
-	ContentPath string // Path to website content
-	WebPath     string // Path to website assets
+	BindAddress         string // Address to listen at
+	ContentPath         string // Path to website content
+	WebPath             string // Path to website assets
+	EnableLiveTemplates bool   // Do not cache template files
 }
 
 func NewConfig() *Config {

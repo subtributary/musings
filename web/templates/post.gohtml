@@ -1,20 +1,10 @@
 <!doctype HTML>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Musings Pre-Alpha Version</title>
-    <link rel="stylesheet" href="/_static/css/default.css">
-</head>
+{{template "partials/head"}}
 <body>
-<header>
-    Header goes here.
-</header>
-<main class="container">
+{{template "partials/header"}}
+<main>
     {{.HtmlContent}}
 </main>
-<footer>
-    Footer goes here.
-</footer>
 </body>
 </html>
