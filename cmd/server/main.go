@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/subtributary/musings/internal/app"
+	"github.com/subtributary/musings/internal/files"
 	"github.com/subtributary/musings/internal/markdown"
 	"github.com/subtributary/musings/internal/templates"
 )
@@ -58,7 +59,9 @@ func loadServices(config *app.Config) (*app.Services, error) {
 		services.TemplateProvider = provider
 	}
 
+	services.ContentStore = files.NewStore(config.ContentPath)
 	services.MarkdownStore = markdown.NewStore(config.ContentPath)
+	services.StaticStore = files.NewStore(config.GetStaticPath())
 
 	return &services, nil
 }

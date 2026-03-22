@@ -3,7 +3,6 @@ package templates
 import (
 	"fmt"
 	"html/template"
-	"io"
 	"os"
 
 	"github.com/subtributary/musings/internal/localization"
@@ -19,23 +18,12 @@ func newStore() *Store {
 	}
 }
 
-func (s *Store) Execute(w io.Writer, name string, locale string, data any) error {
-	tmpl, found := localization.FindMatchCb(s.templates, locale, func(t *template.Template) bool {
-		return t.Lookup(name) != nil
+func (s *Store) Lookup(name string, locale string) (tmpl *template.Template) {
+	_, _ = localization.FindMatchCb(s.templates, locale, func(t *template.Template) bool {
+		tmpl = t.Lookup(name)
+		return tmpl != nil
 	})
-	if !found {
-		return fmt.Errorf("template %q not found for locale %q", name, locale)
-	}
-
-	tmpl = tmpl.Lookup(name)
-	if tmpl == nil {
-		panic("Template is expected to exist at this point.")
-	}
-
-	if err := tmpl.Execute(w, data); err != nil {
-		return fmt.Errorf("template %q for locale %q failed to execute: %w", name, locale, err)
-	}
-	return nil
+	return
 }
 
 func (s *Store) Load(path string) error {

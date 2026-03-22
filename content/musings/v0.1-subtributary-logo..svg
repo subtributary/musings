@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="400px" height="400px" viewBox="0 0 99 99" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="49" cy="49" r="49" fill="#ddd" />
+
+    <g fill="none" stroke="#16a">
+        <circle cx="49" cy="49" r="44" stroke-width="10" stroke-dasharray="138.23 138.23" />
+        <circle cx="49" cy="49" r="42" stroke-width="6" stroke-dasharray="65.97 197.92" stroke-dashoffset="65.97" />
+        <circle cx="49" cy="49" r="36" stroke-width="2" stroke-dasharray="56.55 169.64" stroke-dashoffset="56.55" />
+    </g>
+    
+    <defs>
+        <rect id="b0" x="0" y="0" width="16" height="10" fill="#a61" rx="1" />
+        <rect id="b1" x="0" y="0" width="16" height="10" fill="#a61" rx="1" />
+    </defs>
+
+    <g>
+        <use href="#b0" x="22" y="53" />
+        <use href="#b0" x="42" y="53" />
+        <use href="#b0" x="62" y="53" />
+
+        <use href="#b1" x="32" y="39" />
+        <use href="#b1" x="52" y="39" />
+        
+        <use href="#b1" x="42" y="25" />
+    </g>
+</svg>
