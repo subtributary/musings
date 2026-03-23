@@ -19,6 +19,5 @@ func FindMatchCb[T any](haystack map[string]T, locale string, foundCb func(T) bo
 			break
 		}
 	}
-
 	return
 }

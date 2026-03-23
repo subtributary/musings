@@ -1,11 +1,14 @@
 package app
 
 import (
+	"errors"
 	"log"
 	"net/http"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/subtributary/musings/internal/store"
 )
 
 type Server struct {
@@ -48,7 +51,7 @@ func (s *Server) handleContentGet(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 
-	http.ServeFile(w, r, foundPath)
+	http.ServeFile(w, r, filepath.Join(s.config.ContentPath, foundPath))
 	return true
 }
 
@@ -59,17 +62,14 @@ func (s *Server) handleIndexGet(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePostGet(w http.ResponseWriter, r *http.Request) {
 	const locale = "" // I'll set this next update.
-	path := chi.URLParam(r, "*")
+	path := chi.URLParam(r, "*") + ".md"
 
-	foundPath, err := s.services.MarkdownStore.Find(path, locale)
-	if err != nil {
+	fileData, err := s.services.PostsStore.Parse(path, locale)
+	if errors.Is(err, &store.NotFoundError{}) {
 		log.Printf("error finding markdown file: %v", err)
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
-	}
-
-	fileData, err := s.services.MarkdownStore.Parse(foundPath)
-	if err != nil {
+	} else if err != nil {
 		log.Printf("error parsing markdown file: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -83,23 +83,28 @@ func (s *Server) handleStaticGet(w http.ResponseWriter, r *http.Request) {
 	path := chi.URLParam(r, "*")
 
 	foundPath, err := s.services.StaticStore.Find(path, locale)
-	if err != nil || foundPath == "" {
+	if errors.Is(err, &store.NotFoundError{}) {
+		log.Printf("error finding static file: %v", err)
 		http.NotFound(w, r)
+		return
+	} else if err != nil {
+		log.Printf("error parsing markdown file: %v", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	http.ServeFile(w, r, foundPath)
+	http.ServeFile(w, r, filepath.Join(s.config.GetStaticPath(), foundPath))
 }
 
 func (s *Server) writeTemplate(w http.ResponseWriter, name string, locale string, data any) {
-	store, err := s.services.TemplateProvider.Get()
+	templatesStore, err := s.services.TemplateProvider.Get()
 	if err != nil {
 		log.Printf("could not load templates: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	tmpl := store.Lookup(name, locale)
+	tmpl := templatesStore.Lookup(name, locale)
 	if tmpl == nil {
 		// This isn't a 404 because all templates referenced should be present.
 		log.Printf("could not locate template: %q", name)

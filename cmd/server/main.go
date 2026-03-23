@@ -7,9 +7,7 @@ import (
 	"os"
 
 	"github.com/subtributary/musings/internal/app"
-	"github.com/subtributary/musings/internal/files"
-	"github.com/subtributary/musings/internal/markdown"
-	"github.com/subtributary/musings/internal/templates"
+	"github.com/subtributary/musings/internal/store"
 )
 
 func main() {
@@ -50,18 +48,18 @@ func loadServices(config *app.Config) (*app.Services, error) {
 	services := app.Services{}
 
 	if config.EnableLiveTemplates {
-		services.TemplateProvider = templates.NewLiveTemplateProvider(config.GetTemplatesPath())
+		services.TemplateProvider = store.NewLiveTemplateProvider(config.GetTemplatesPath())
 	} else {
-		provider, err := templates.NewCachedTemplateProvider(config.GetTemplatesPath())
+		provider, err := store.NewCachedTemplateProvider(config.GetTemplatesPath())
 		if err != nil {
 			return nil, fmt.Errorf("new template provider: %w", err)
 		}
 		services.TemplateProvider = provider
 	}
 
-	services.ContentStore = files.NewStore(config.ContentPath)
-	services.MarkdownStore = markdown.NewStore(config.ContentPath)
-	services.StaticStore = files.NewStore(config.GetStaticPath())
+	services.ContentStore = store.NewStaticStore(config.ContentPath)
+	services.PostsStore = store.NewPostsStore(config.ContentPath)
+	services.StaticStore = store.NewStaticStore(config.GetStaticPath())
 
 	return &services, nil
 }
