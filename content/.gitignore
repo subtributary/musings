@@ -1,2 +1,4 @@
-.gitignore
-!.gitignore
+# I will allow contents into source control for now,
+# but I will delete them later when I have the blog forked.
+#.gitignore
+#!.gitignore
