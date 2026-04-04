@@ -7,7 +7,11 @@ import (
 	"os"
 
 	"github.com/subtributary/musings/internal/app"
+	"github.com/subtributary/musings/internal/files"
+	"github.com/subtributary/musings/internal/posts"
 	"github.com/subtributary/musings/internal/store"
+	"github.com/subtributary/musings/internal/templates"
+	"golang.org/x/text/language"
 )
 
 func main() {
@@ -30,36 +34,40 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-func loadConfig() *app.Config {
-	config := app.NewConfig()
-
+func loadConfig() (config app.Config) {
 	config.BindAddress = os.Getenv("MUSINGS_BIND_ADDRESS")
 	config.ContentPath = os.Getenv("MUSINGS_CONTENT_PATH")
 	config.WebPath = os.Getenv("MUSINGS_WEB_PATH")
+	locales := os.Getenv("MUSINGS_LOCALES")
 
 	flag.BoolVar(&config.EnableLiveTemplates, "live-templates", false, "Do not cache template files")
 	flag.StringVar(&config.BindAddress, "web-endpoint", config.BindAddress, "Web endpoint to listen at")
+	flag.StringVar(&locales, "locales", locales, "Supported locales")
 	flag.Parse()
 
-	return config
+	tags, _, err := language.ParseAcceptLanguage(locales)
+	if err != nil {
+		log.Fatalf("could not parse locales: %v", err)
+	}
+	config.Locales = tags
+
+	return
 }
 
-func loadServices(config *app.Config) (*app.Services, error) {
-	services := app.Services{}
-
+func loadServices(config app.Config) (services app.Services, err error) {
 	if config.EnableLiveTemplates {
-		services.TemplateProvider = store.NewLiveTemplateProvider(config.GetTemplatesPath())
+		services.TemplateProvider = templates.NewLiveProvider(config.GetTemplatesPath(), config.Locales)
 	} else {
-		provider, err := store.NewCachedTemplateProvider(config.GetTemplatesPath())
+		services.TemplateProvider, err = templates.NewCachedProvider(config.GetTemplatesPath(), config.Locales)
 		if err != nil {
-			return nil, fmt.Errorf("new template provider: %w", err)
+			err = fmt.Errorf("new template provider: %w", err)
+			return
 		}
-		services.TemplateProvider = provider
 	}
 
-	services.ContentStore = store.NewStaticStore(config.ContentPath)
-	services.PostsStore = store.NewPostsStore(config.ContentPath)
-	services.StaticStore = store.NewStaticStore(config.GetStaticPath())
+	services.ContentStore = files.NewStore(config.ContentPath, config.Locales)
+	services.PostsStore = posts.NewStore(config.ContentPath, config.Locales)
+	services.StaticStore = files.NewStore(config.GetStaticPath(), config.Locales)
 
-	return &services, nil
+	return
 }

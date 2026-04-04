@@ -12,13 +12,13 @@ import (
 )
 
 type Server struct {
-	config   *Config
+	config   Config
 	router   *chi.Mux
-	services *Services
+	services Services
 }
 
-func NewServer(services *Services, config *Config) (*Server, error) {
-	s := &Server{
+func NewServer(services Services, config Config) (Server, error) {
+	s := Server{
 		config:   config,
 		router:   chi.NewRouter(),
 		services: services,

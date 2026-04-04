@@ -1,4 +1,4 @@
-package store
+package posts
 
 import (
 	"bytes"
@@ -10,13 +10,13 @@ import (
 	"github.com/yuin/goldmark"
 )
 
-type PostsStore struct {
+type Store struct {
 	rootPath string
 	markdown goldmark.Markdown
 }
 
-func NewPostsStore(rootPath string) *PostsStore {
-	return &PostsStore{
+func NewStore(rootPath string) *Store {
+	return &Store{
 		rootPath: rootPath,
 		markdown: goldmark.New(),
 	}
@@ -25,7 +25,7 @@ func NewPostsStore(rootPath string) *PostsStore {
 // Parse parses the localized variant of a post.
 //
 // If not found, `store.NotFoundError` is returned.
-func (s *PostsStore) Parse(path string, locale string) (*PostData, error) {
+func (s *Store) Parse(path string, locale string) (*PostData, error) {
 	contents, err := s.readMarkdown(path, locale)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func (s *PostsStore) Parse(path string, locale string) (*PostData, error) {
 	return result, nil
 }
 
-func (s *PostsStore) convertToHtml(contents []byte) (html string, err error) {
+func (s *Store) convertToHtml(contents []byte) (html string, err error) {
 	buffer := bytes.Buffer{}
 	err = s.markdown.Convert(contents, &buffer)
 	if err == nil {
@@ -50,7 +50,7 @@ func (s *PostsStore) convertToHtml(contents []byte) (html string, err error) {
 	return
 }
 
-func (s *PostsStore) readMarkdown(path string, locale string) ([]byte, error) {
+func (s *Store) readMarkdown(path string, locale string) ([]byte, error) {
 	root, err := os.OpenRoot(s.rootPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not open root: %w", err)

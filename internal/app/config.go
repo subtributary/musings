@@ -4,20 +4,19 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/text/language"
 )
 
 type Config struct {
-	BindAddress         string // Address to listen at
-	ContentPath         string // Path to website content
-	WebPath             string // Path to website assets
-	EnableLiveTemplates bool   // Do not cache template files
+	BindAddress         string         // Address to listen at
+	ContentPath         string         // Path to website content
+	WebPath             string         // Path to website assets
+	EnableLiveTemplates bool           // Do not cache template files
+	Locales             []language.Tag // Supported locales
 }
 
-func NewConfig() *Config {
-	return &Config{}
-}
-
-func (config *Config) IsSane() (bool, error) {
+func (config Config) IsSane() (bool, error) {
 	if config.BindAddress == "" {
 		return false, errors.New("bind address is not specified")
 	}
@@ -50,13 +49,17 @@ func (config *Config) IsSane() (bool, error) {
 	// Luckily, an invalid value will cause an immediate error.
 	// I will rely on that quick failure instead of trying to validate the endpoint here.
 
+	if len(config.Locales) == 0 {
+		return false, errors.New("locales are not specified")
+	}
+
 	return true, nil
 }
 
-func (config *Config) GetStaticPath() string {
+func (config Config) GetStaticPath() string {
 	return filepath.Join(config.WebPath, "static")
 }
 
-func (config *Config) GetTemplatesPath() string {
+func (config Config) GetTemplatesPath() string {
 	return filepath.Join(config.WebPath, "templates")
 }
