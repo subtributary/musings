@@ -2,13 +2,15 @@ package app
 
 import (
 	"errors"
+	"io/fs"
 	"log"
 	"net/http"
-	"path/filepath"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/subtributary/musings/internal/store"
+	"github.com/subtributary/musings/internal/localization"
+	"golang.org/x/text/language"
 )
 
 type Server struct {
@@ -17,7 +19,7 @@ type Server struct {
 	services Services
 }
 
-func NewServer(services Services, config Config) (Server, error) {
+func NewServer(services Services, config Config) Server {
 	s := Server{
 		config:   config,
 		router:   chi.NewRouter(),
@@ -25,95 +27,94 @@ func NewServer(services Services, config Config) (Server, error) {
 	}
 
 	s.router.Use(middleware.Logger)
+	s.router.Use(localization.LocalizedRoute(s.config.Locales))
 	s.router.Get("/", s.handleIndexGet)
-	s.router.Get("/_static/*", s.handleStaticGet)
-	s.router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		if !s.handleContentGet(w, r) {
-			s.handlePostGet(w, r)
-		}
-	})
+	s.router.Get("/_static/*", s.handleStatic)
+	s.router.Get("/*", s.handleContent)
 
-	return s, nil
+	return s
 }
 
 func (s *Server) ListenAndServe() error {
 	return http.ListenAndServe(s.config.BindAddress, s.router)
 }
 
-// handleContentGet handles GET requests for content.
-// It returns true if it handles the request.
-func (s *Server) handleContentGet(w http.ResponseWriter, r *http.Request) bool {
-	const locale = "" // I'll set this next update.
-	path := chi.URLParam(r, "*")
-
-	foundPath, err := s.services.ContentStore.Find(path, locale)
-	if err != nil || foundPath == "" {
-		return false
+func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
+	locale := r.Header.Get("Accept-Language")
+	root, localizedFS, err := s.openRoot(r, s.config.ContentPath, locale)
+	if err != nil {
+		serveError(w, r, err)
+		return
 	}
+	defer func() { _ = root.Close() }()
 
-	http.ServeFile(w, r, filepath.Join(s.config.ContentPath, foundPath))
-	return true
+	path := chi.URLParam(r, "*")
+	if _, err := fs.Stat(localizedFS, path); err != nil {
+		s.servePost(w, r, localizedFS, path)
+	} else {
+		http.ServeFileFS(w, r, localizedFS, path)
+	}
 }
 
 func (s *Server) handleIndexGet(w http.ResponseWriter, r *http.Request) {
-	const locale = "" // I'll set this next update.
-	s.writeTemplate(w, "index", locale, nil)
-}
-
-func (s *Server) handlePostGet(w http.ResponseWriter, r *http.Request) {
-	const locale = "" // I'll set this next update.
-	path := chi.URLParam(r, "*") + ".md"
-
-	fileData, err := s.services.PostsStore.Parse(path, locale)
-	if errors.Is(err, &store.NotFoundError{}) {
-		log.Printf("error finding markdown file: %v", err)
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		return
-	} else if err != nil {
-		log.Printf("error parsing markdown file: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+	locale := r.Header.Get("Accept-Language")
+	bestTag, _ := language.MatchStrings(s.services.Matcher, locale)
+	if err := s.services.TemplateStore.Execute(w, "index", bestTag, nil); err != nil {
+		serveError(w, r, err)
 	}
-
-	s.writeTemplate(w, "post", locale, fileData)
 }
 
-func (s *Server) handleStaticGet(w http.ResponseWriter, r *http.Request) {
-	const locale = "" // I'll set this next update.
-	path := chi.URLParam(r, "*")
-
-	foundPath, err := s.services.StaticStore.Find(path, locale)
-	if errors.Is(err, &store.NotFoundError{}) {
-		log.Printf("error finding static file: %v", err)
-		http.NotFound(w, r)
-		return
-	} else if err != nil {
-		log.Printf("error parsing markdown file: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	http.ServeFile(w, r, filepath.Join(s.config.GetStaticPath(), foundPath))
-}
-
-func (s *Server) writeTemplate(w http.ResponseWriter, name string, locale string, data any) {
-	templatesStore, err := s.services.TemplateProvider.Get()
+func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
+	locale := r.Header.Get("Accept-Language")
+	root, localizedFS, err := s.openRoot(r, s.config.GetStaticPath(), locale)
 	if err != nil {
-		log.Printf("could not load templates: %v", err)
+		serveError(w, r, err)
+		return
+	}
+	defer func() { _ = root.Close() }()
+
+	path := chi.URLParam(r, "*")
+	http.ServeFileFS(w, r, localizedFS, path)
+}
+
+func (s *Server) openRoot(r *http.Request, rootPath string, locale string) (root *os.Root, fs fs.FS, err error) {
+	root, err = os.OpenRoot(rootPath)
+	if err == nil {
+		bestTag, _ := language.MatchStrings(s.services.Matcher, locale)
+		fs = localization.NewLocalizedFS(root.FS(), bestTag)
+	}
+	return
+}
+
+func serveError(w http.ResponseWriter, r *http.Request, err error) {
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		log.Printf("file not found: %v", err)
+		http.NotFound(w, r)
+	} else {
+		log.Printf("server error: %v", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) servePost(w http.ResponseWriter, r *http.Request, fs fs.FS, path string) {
+	file, err := fs.Open(path + ".md")
+	if err != nil {
+		serveError(w, r, err)
 		return
 	}
 
-	tmpl := templatesStore.Lookup(name, locale)
-	if tmpl == nil {
-		// This isn't a 404 because all templates referenced should be present.
-		log.Printf("could not locate template: %q", name)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	// todo: handle http options here please
+
+	postData, err := s.services.PostParser.Parse(file)
+	if err != nil {
+		serveError(w, r, err)
 		return
 	}
 
-	if err := tmpl.Execute(w, data); err != nil {
-		log.Printf("could not execute template: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	locale := r.Header.Get("Accept-Language")
+	bestTag, _ := language.MatchStrings(s.services.Matcher, locale)
+	if err := s.services.TemplateStore.Execute(w, "post", bestTag, postData); err != nil {
+		serveError(w, r, err)
 	}
 }

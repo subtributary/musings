@@ -9,15 +9,15 @@ type Provider interface {
 }
 
 type CachedProvider struct {
-	store *Store
+	store Store
 }
 
-func NewCachedProvider(path string) (*CachedProvider, error) {
-	store := newTemplatesStore()
-	if err := store.Load(path); err != nil {
-		return nil, fmt.Errorf("load cached templates: %w", err)
+func NewCachedProvider(path string) (provider CachedProvider, err error) {
+	provider.store = newTemplatesStore()
+	err = provider.store.Load(path)
+	if err != nil {
+		err = fmt.Errorf("load cached templates: %w", err)
 	}
-	return &CachedProvider{store: store}, nil
 }
 
 func (p *CachedProvider) Get() (*Store, error) {

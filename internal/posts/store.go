@@ -4,76 +4,56 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"os"
 
-	"github.com/subtributary/musings/internal/localization"
 	"github.com/yuin/goldmark"
+	"golang.org/x/text/language"
 )
 
 type Store struct {
-	rootPath string
 	markdown goldmark.Markdown
+	files    files.Store
 }
 
-func NewStore(rootPath string) *Store {
+func NewStore(rootPath string, tags []language.Tag) *Store {
 	return &Store{
-		rootPath: rootPath,
 		markdown: goldmark.New(),
+		files:    files.NewStore(rootPath, tags),
 	}
 }
 
 // Parse parses the localized variant of a post.
 //
 // If not found, `store.NotFoundError` is returned.
-func (s *Store) Parse(path string, locale string) (*PostData, error) {
-	contents, err := s.readMarkdown(path, locale)
-	if err != nil {
-		return nil, err
-	}
-
-	html, err := s.convertToHtml(contents)
-	if err != nil {
-		return nil, fmt.Errorf("could not convert file: %w", err)
-	}
-
-	var result = &PostData{HtmlContent: template.HTML(html)}
-	result.populateMetadata(contents)
-	return result, nil
-}
-
-func (s *Store) convertToHtml(contents []byte) (html string, err error) {
-	buffer := bytes.Buffer{}
-	err = s.markdown.Convert(contents, &buffer)
-	if err == nil {
-		html = buffer.String()
-	}
-	return
-}
-
-func (s *Store) readMarkdown(path string, locale string) ([]byte, error) {
+func (s *Store) Parse(path string, locale string) (PostData, error) {
 	root, err := os.OpenRoot(s.rootPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not open root: %w", err)
 	}
 	defer func() { _ = root.Close() }()
 
-	file, err := localization.FindFile(root, path)
+	// Read file contents.
+	bestTag, _ := language.MatchStrings(s.matcher, locale)
+	localizedFS := files.NewLocalizedFS(root.FS(), bestTag)
+	contents, err := fs.ReadFile(localizedFS, path)
 	if err != nil {
-		return nil, newFileNotFoundError(path, err)
+		return nil, fmt.Errorf("could not read file %q: %w", path, err)
 	}
 
-	resolvedPath, isFound := file.UseLocale(locale)
-	if !isFound {
-		return nil, newLocaleNotFoundError(path, locale)
+	// Convert to HTML.
+	buffer := bytes.Buffer{}
+	err = s.markdown.Convert(contents, &buffer)
+	if err != nil {
+		return nil, fmt.Errorf("could not convert file %q: %w", path, err)
 	}
+	html := buffer.String()
 
-	return root.ReadFile(resolvedPath)
+	return PostData{
+		HtmlContent: template.HTML(html),
+	}, nil
 }
 
 type PostData struct {
 	HtmlContent template.HTML
-}
-
-func (s *PostData) populateMetadata(contents []byte) {
-	// todo: figure out and populate metadata
 }

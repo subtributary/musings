@@ -7,9 +7,7 @@ import (
 	"os"
 
 	"github.com/subtributary/musings/internal/app"
-	"github.com/subtributary/musings/internal/files"
 	"github.com/subtributary/musings/internal/posts"
-	"github.com/subtributary/musings/internal/store"
 	"github.com/subtributary/musings/internal/templates"
 	"golang.org/x/text/language"
 )

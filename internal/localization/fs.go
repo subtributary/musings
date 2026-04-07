@@ -1,6 +1,7 @@
-package files
+package localization
 
 import (
+	"fmt"
 	"io/fs"
 	"log"
 	"path/filepath"
@@ -38,17 +39,17 @@ func (d DirEntry) Info() (fs.FileInfo, error) {
 	return d.wrapped.Info()
 }
 
-// LocalizedFS is a file system that supports localized versions of files.
+// LocalizedFS enhances a file system to support localized versions of files.
 //
 // Localized versions of files should be named with the lowercased canonical
 // locale string as a secondary extension in front of the primary extension;
 // for example, "hello.en.md" is the English version of "hello.md".
 type LocalizedFS struct {
 	tag     language.Tag
-	wrapped fs.ReadDirFS
+	wrapped fs.FS
 }
 
-func NewLocalizedFS(wrapped fs.ReadDirFS, tag language.Tag) LocalizedFS {
+func NewLocalizedFS(wrapped fs.FS, tag language.Tag) LocalizedFS {
 	return LocalizedFS{tag, wrapped}
 }
 
@@ -74,27 +75,16 @@ func (f LocalizedFS) Open(name string) (fs.File, error) {
 	return f.wrapped.Open(name)
 }
 
-// ReadDir lists all files supported by the configured locale.
-//
-// If files for more than one locale are desired, then Scan is more performant than
-// calling ReadDir for multiple localized file systems.
-func (f LocalizedFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	files, err := f.wrapped.ReadDir(name)
-	if err != nil {
-		return nil, err
-	}
-
-	groupedFiles := scan(files, []language.Tag{f.tag})
-	return groupedFiles[f.tag], nil
-}
-
 // Scan returns the files in a directory with the locale stripped from the filename
 // and used to group files together by locale. Files with an unsupported locale are
 // not listed.
+//
+// This is better than fs.ReadDir when entries for multiple locales will be wanted,
+// which is the usual case in this project.
 func Scan(dir fs.FS, tags []language.Tag) (map[language.Tag][]fs.DirEntry, error) {
 	files, err := fs.ReadDir(dir, ".")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read dir: %w", err)
 	}
 	return scan(files, tags), nil
 }
