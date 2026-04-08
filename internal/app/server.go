@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/subtributary/musings/internal/localization"
-	"golang.org/x/text/language"
 )
 
 type Server struct {
@@ -40,13 +39,14 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
-	locale := r.Header.Get("Accept-Language")
-	root, localizedFS, err := s.openRoot(r, s.config.ContentPath, locale)
+	root, err := os.OpenRoot(s.config.ContentPath)
 	if err != nil {
 		serveError(w, r, err)
-		return
 	}
 	defer func() { _ = root.Close() }()
+
+	locale := localization.LocaleFromContext(r.Context())
+	localizedFS := localization.NewLocalizedFS(root.FS(), locale)
 
 	path := chi.URLParam(r, "*")
 	if _, err := fs.Stat(localizedFS, path); err != nil {
@@ -57,33 +57,24 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleIndexGet(w http.ResponseWriter, r *http.Request) {
-	locale := r.Header.Get("Accept-Language")
-	bestTag, _ := language.MatchStrings(s.services.Matcher, locale)
-	if err := s.services.TemplateStore.Execute(w, "index", bestTag, nil); err != nil {
+	locale := localization.LocaleFromContext(r.Context())
+	if err := s.services.TemplateStore.Execute(w, "index", locale, nil); err != nil {
 		serveError(w, r, err)
 	}
 }
 
 func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	locale := r.Header.Get("Accept-Language")
-	root, localizedFS, err := s.openRoot(r, s.config.GetStaticPath(), locale)
+	root, err := os.OpenRoot(s.config.GetStaticPath())
 	if err != nil {
 		serveError(w, r, err)
-		return
 	}
 	defer func() { _ = root.Close() }()
 
+	locale := localization.LocaleFromContext(r.Context())
+	localizedFS := localization.NewLocalizedFS(root.FS(), locale)
+
 	path := chi.URLParam(r, "*")
 	http.ServeFileFS(w, r, localizedFS, path)
-}
-
-func (s *Server) openRoot(r *http.Request, rootPath string, locale string) (root *os.Root, fs fs.FS, err error) {
-	root, err = os.OpenRoot(rootPath)
-	if err == nil {
-		bestTag, _ := language.MatchStrings(s.services.Matcher, locale)
-		fs = localization.NewLocalizedFS(root.FS(), bestTag)
-	}
-	return
 }
 
 func serveError(w http.ResponseWriter, r *http.Request, err error) {
@@ -104,7 +95,7 @@ func (s *Server) servePost(w http.ResponseWriter, r *http.Request, fs fs.FS, pat
 		return
 	}
 
-	// todo: handle http options here please
+	// todo: handle http head here please
 
 	postData, err := s.services.PostParser.Parse(file)
 	if err != nil {
@@ -112,9 +103,8 @@ func (s *Server) servePost(w http.ResponseWriter, r *http.Request, fs fs.FS, pat
 		return
 	}
 
-	locale := r.Header.Get("Accept-Language")
-	bestTag, _ := language.MatchStrings(s.services.Matcher, locale)
-	if err := s.services.TemplateStore.Execute(w, "post", bestTag, postData); err != nil {
+	locale := localization.LocaleFromContext(r.Context())
+	if err := s.services.TemplateStore.Execute(w, "post", locale, postData); err != nil {
 		serveError(w, r, err)
 	}
 }

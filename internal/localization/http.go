@@ -14,9 +14,11 @@ import (
 
 type localeKey struct{}
 
-func LocaleFromContext(ctx context.Context) (language.Tag, bool) {
-	tag, ok := ctx.Value(localeKey{}).(language.Tag)
-	return tag, ok
+func LocaleFromContext(ctx context.Context) language.Tag {
+	if value, ok := ctx.Value(localeKey{}).(language.Tag); ok {
+		return value
+	}
+	panic("context is not set; LocalizedRoute middleware needs to be used")
 }
 
 func withLocale(ctx context.Context, tag language.Tag) context.Context {
