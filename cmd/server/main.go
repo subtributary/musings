@@ -18,15 +18,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	services, err := loadServices(config)
-	if err != nil {
-		log.Fatal(err)
-	}
+	services := loadServices(config)
 
-	server, err := app.NewServer(services, config)
-	if err != nil {
-		log.Fatal(err)
-	}
+	server := app.NewServer(services, config)
 
 	fmt.Printf("Listening at %s\n", config.BindAddress)
 	log.Fatal(server.ListenAndServe())
@@ -47,25 +41,26 @@ func loadConfig() (config app.Config) {
 	if err != nil {
 		log.Fatalf("could not parse locales: %v", err)
 	}
+	if len(tags) == 0 {
+		tags = []language.Tag{language.Und}
+	}
 	config.Locales = tags
 
 	return
 }
 
-func loadServices(config app.Config) (services app.Services, err error) {
-	if config.EnableLiveTemplates {
-		services.TemplateProvider = templates.NewLiveProvider(config.GetTemplatesPath(), config.Locales)
-	} else {
-		services.TemplateProvider, err = templates.NewCachedProvider(config.GetTemplatesPath(), config.Locales)
-		if err != nil {
-			err = fmt.Errorf("new template provider: %w", err)
-			return
-		}
-	}
+func loadServices(config app.Config) (services app.Services) {
+	services.PostParser = posts.NewParser()
 
-	services.ContentStore = files.NewStore(config.ContentPath, config.Locales)
-	services.PostsStore = posts.NewStore(config.ContentPath, config.Locales)
-	services.StaticStore = files.NewStore(config.GetStaticPath(), config.Locales)
+	if config.EnableLiveTemplates {
+		services.TemplateStore = templates.NewLiveStore(config.GetTemplatesPath(), config.Locales)
+	} else {
+		store, err := templates.NewCachedStore(config.GetTemplatesPath(), config.Locales)
+		if err != nil {
+			log.Fatalf("error loading templates: %v", err)
+		}
+		services.TemplateStore = store
+	}
 
 	return
 }

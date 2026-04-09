@@ -75,21 +75,21 @@ func (f LocalizedFS) Open(name string) (fs.File, error) {
 	return f.wrapped.Open(name)
 }
 
-// Scan returns the files in a directory with the locale stripped from the filename
-// and used to group files together by locale. Files with an unsupported locale are
-// not listed.
-//
-// This is better than fs.ReadDir when entries for multiple locales will be wanted,
-// which is the usual case in this project.
-func Scan(dir fs.FS, tags []language.Tag) (map[language.Tag][]fs.DirEntry, error) {
-	files, err := fs.ReadDir(dir, ".")
-	if err != nil {
-		return nil, fmt.Errorf("read dir: %w", err)
-	}
-	return scan(files, tags), nil
+type ScanResult struct {
+	files []fs.DirEntry
 }
 
-func scan(files []fs.DirEntry, tags []language.Tag) map[language.Tag][]fs.DirEntry {
+// Scan returns the files in a directory as a [ScanResult], which can be used
+// to group them by locale. This is better than [fs.ReadDir] when entries for
+// multiple locales are wanted.
+func Scan(dir fs.FS) (result ScanResult, err error) {
+	if result.files, err = fs.ReadDir(dir, "."); err != nil {
+		err = fmt.Errorf("read dir: %w", err)
+	}
+	return
+}
+
+func (r ScanResult) GroupByTag(tags []language.Tag) map[language.Tag][]fs.DirEntry {
 	result := make(map[language.Tag][]fs.DirEntry)
 	visited := make(map[language.Tag]map[string]struct{})
 	for _, tag := range tags {
@@ -97,7 +97,7 @@ func scan(files []fs.DirEntry, tags []language.Tag) map[language.Tag][]fs.DirEnt
 		visited[tag] = make(map[string]struct{})
 	}
 
-	for _, file := range files {
+	for _, file := range r.files {
 		// Directories are not localized.
 		if file.IsDir() {
 			for _, tag := range tags {
@@ -122,7 +122,6 @@ func scan(files []fs.DirEntry, tags []language.Tag) map[language.Tag][]fs.DirEnt
 		}
 
 		// Add to all sets that understand the file tag.
-		found := false
 		for _, tag := range tags {
 			if _, ok := visited[tag][fileName]; ok {
 				continue
@@ -132,13 +131,6 @@ func scan(files []fs.DirEntry, tags []language.Tag) map[language.Tag][]fs.DirEnt
 			}
 			result[tag] = append(result[tag], dirEntry)
 			visited[tag][fileName] = struct{}{}
-			found = true
-		}
-
-		// Helpful log message
-		if !found {
-			unlocalizedName := file.Name()
-			log.Printf("file skipped because of disabled locale: %s", unlocalizedName)
 		}
 	}
 

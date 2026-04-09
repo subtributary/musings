@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/subtributary/musings/internal/localization"
@@ -25,50 +23,56 @@ type CachedStore struct {
 	templates map[language.Tag]*template.Template
 }
 
-func NewCachedStore(tags []language.Tag) CachedStore {
-	s := CachedStore{}
+func NewCachedStore(rootPath string, tags []language.Tag) (s CachedStore, err error) {
+	s.templates = make(map[language.Tag]*template.Template)
 	for _, tag := range tags {
 		s.templates[tag] = template.New("")
 	}
-	return s
-}
 
-func (s CachedStore) Execute(w http.ResponseWriter, name string, tag language.Tag, data any) error {
-	tmpl, ok := s.templates[tag]
-	if !ok {
-		return fmt.Errorf("template for locale %v not found", tag)
-	}
-	return tmpl.Execute(w, data)
-}
-
-func (s CachedStore) Load(rootPath string) error {
 	root, err := os.OpenRoot(rootPath)
 	if err != nil {
-		return fmt.Errorf("open root: %s", err)
+		err = fmt.Errorf("open root: %s", err)
+		return
 	}
 	defer func() { _ = root.Close() }()
 
-	if err := s.load(root, ".", ""); err != nil {
-		return fmt.Errorf("load page templates: %w", err)
+	if err = s.loadTemplatesFromPath(root, ".", tags, ""); err != nil {
+		err = fmt.Errorf("load page templates: %w", err)
+	} else if err = s.loadTemplatesFromPath(root, "partials", tags, "partials/"); err != nil {
+		err = fmt.Errorf("load partial templates: %w", err)
 	}
-	if err := s.load(root, "partials", "partials/"); err != nil {
-		return fmt.Errorf("load partial templates: %w", err)
-	}
-	return nil
+
+	return
 }
 
-func (s CachedStore) load(root *os.Root, path string, prefix string) error {
+func (s CachedStore) Execute(w http.ResponseWriter, name string, tag language.Tag, data any) error {
+	if tmpl := s.lookupTemplate(name, tag); tmpl == nil {
+		return fmt.Errorf("template for locale %v not found", tag)
+	} else {
+		return tmpl.Execute(w, data)
+	}
+}
+
+func (s CachedStore) lookupTemplate(name string, tag language.Tag) *template.Template {
+	tmpl := s.templates[tag]
+	if tmpl != nil {
+		tmpl = tmpl.Lookup(name)
+	}
+	return tmpl
+}
+
+func (s CachedStore) loadTemplatesFromPath(root *os.Root, path string, tags []language.Tag, prefix string) error {
 	dir, err := root.OpenRoot(path)
 	if err != nil {
 		return fmt.Errorf("open root: %w", err)
 	}
 	defer func() { _ = dir.Close() }()
 
-	tags := slices.Collect(maps.Keys(s.templates))
-	groupedFiles, err := localization.Scan(dir.FS(), tags)
+	scanResult, err := localization.Scan(dir.FS())
 	if err != nil {
 		return fmt.Errorf("scan files: %w", err)
 	}
+	groupedFiles := scanResult.GroupByTag(tags)
 
 	for tag, dirEntries := range groupedFiles {
 		localizedFS := localization.NewLocalizedFS(dir.FS(), tag)
@@ -100,11 +104,17 @@ type LiveStore struct {
 	tags     []language.Tag
 }
 
+func NewLiveStore(rootPath string, tags []language.Tag) LiveStore {
+	return LiveStore{
+		rootPath: rootPath,
+		tags:     tags,
+	}
+}
+
 func (s LiveStore) Execute(w http.ResponseWriter, name string, tag language.Tag, data any) error {
-	temp := NewCachedStore(s.tags)
-	err := temp.Load(s.rootPath)
+	tmpl, err := NewCachedStore(s.rootPath, s.tags)
 	if err != nil {
 		return err
 	}
-	return temp.Execute(w, name, tag, data)
+	return tmpl.Execute(w, name, tag, data)
 }

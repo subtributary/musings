@@ -138,10 +138,11 @@ func TestScan(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			groupedByLocale, err := Scan(tt.fs, tt.tags)
+			scanResult, err := Scan(tt.fs)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+			groupedByLocale := scanResult.GroupByTag(tt.tags)
 
 			for tag, wantEntries := range tt.want {
 				gotEntries, ok := groupedByLocale[tag]

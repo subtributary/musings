@@ -49,10 +49,6 @@ func (config Config) IsSane() (bool, error) {
 	// Luckily, an invalid value will cause an immediate error.
 	// I will rely on that quick failure instead of trying to validate the endpoint here.
 
-	if len(config.Locales) == 0 {
-		return false, errors.New("locales are not specified")
-	}
-
 	return true, nil
 }
 
