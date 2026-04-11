@@ -54,6 +54,7 @@ func LocalizedRoute(tags []language.Tag) func(next http.Handler) http.Handler {
 			} else if slices.Contains(tags, language.Und) {
 				// We do not have a localized path, and we do not care.
 				r = r.WithContext(withLocale(r.Context(), language.Und))
+				chiContext.RoutePath = reqPath
 				next.ServeHTTP(w, r)
 
 			} else {

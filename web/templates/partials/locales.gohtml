@@ -1,0 +1,20 @@
+{{if and (eq (len .LanguageOptions) 1) (eq .Language.Code "und")}}
+    <!-- No languages are configured. -->
+{{else}}
+    <details class="dropdown locale-picker">
+        <summary>
+            <span aria-label="Select language" aria-hidden="true">文Ａ &ndash; {{.Language.Label}}</span>
+        </summary>
+        <ul>
+            {{range .LanguageOptions}}
+                <li>
+                    {{if .IsCurrent}}
+                        <strong>{{.Label}}</strong>
+                    {{else}}
+                        <a href="{{.URL}}">{{.Label}}</a>
+                    {{end}}
+                </li>
+            {{end}}
+        </ul>
+    </details>
+{{end}}

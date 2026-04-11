@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +13,7 @@ import (
 )
 
 type Store interface {
-	Execute(w http.ResponseWriter, name string, tag language.Tag, data any) error
+	Lookup(name string, tag language.Tag) (*template.Template, error)
 }
 
 // CachedStore loads and caches templates at startup.
@@ -45,20 +44,12 @@ func NewCachedStore(rootPath string, tags []language.Tag) (s CachedStore, err er
 	return
 }
 
-func (s CachedStore) Execute(w http.ResponseWriter, name string, tag language.Tag, data any) error {
-	if tmpl := s.lookupTemplate(name, tag); tmpl == nil {
-		return fmt.Errorf("template for locale %v not found", tag)
-	} else {
-		return tmpl.Execute(w, data)
-	}
-}
-
-func (s CachedStore) lookupTemplate(name string, tag language.Tag) *template.Template {
+func (s CachedStore) Lookup(name string, tag language.Tag) (*template.Template, error) {
 	tmpl := s.templates[tag]
 	if tmpl != nil {
 		tmpl = tmpl.Lookup(name)
 	}
-	return tmpl
+	return tmpl, nil
 }
 
 func (s CachedStore) loadTemplatesFromPath(root *os.Root, path string, tags []language.Tag, prefix string) error {
@@ -111,10 +102,10 @@ func NewLiveStore(rootPath string, tags []language.Tag) LiveStore {
 	}
 }
 
-func (s LiveStore) Execute(w http.ResponseWriter, name string, tag language.Tag, data any) error {
-	tmpl, err := NewCachedStore(s.rootPath, s.tags)
-	if err != nil {
-		return err
+func (s LiveStore) Lookup(name string, tag language.Tag) (*template.Template, error) {
+	if tmpl, err := NewCachedStore(s.rootPath, s.tags); err != nil {
+		return nil, err
+	} else {
+		return tmpl.Lookup(name, tag)
 	}
-	return tmpl.Execute(w, name, tag, data)
 }
