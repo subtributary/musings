@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/subtributary/musings/internal/app"
+	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/posts"
 	"github.com/subtributary/musings/internal/templates"
 	"golang.org/x/text/language"
@@ -50,6 +51,8 @@ func loadConfig() (config app.Config) {
 }
 
 func loadServices(config app.Config) (services app.Services) {
+	localization.InitTranslations()
+
 	services.PostParser = posts.NewParser()
 
 	if config.EnableLiveTemplates {

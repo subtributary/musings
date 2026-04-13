@@ -3,7 +3,7 @@
 {{else}}
     <details class="dropdown locale-picker">
         <summary>
-            <span aria-label="Select language" aria-hidden="true">文Ａ &ndash; {{.Language.Label}}</span>
+            <span aria-label="{{.Translations.SelectLanguage}}" aria-hidden="true">文Ａ &ndash; {{.Language.Label}}</span>
         </summary>
         <ul>
             {{range .LanguageOptions}}
