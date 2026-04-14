@@ -66,6 +66,75 @@ func TestLocalizeRoute(t *testing.T) {
 	}
 }
 
+func TestLocalizedRouteAcceptLanguage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name             string
+		acceptLanguage   string
+		supportedLocales []language.Tag
+		expectedLocale   language.Tag
+	}{
+		{
+			name:             "match parent locale when user accepts child locale",
+			acceptLanguage:   "zh-Hans",
+			supportedLocales: []language.Tag{language.Chinese},
+			expectedLocale:   language.Chinese,
+		},
+		{
+			name:             "match child locale when user accepts parent locale",
+			acceptLanguage:   "zh",
+			supportedLocales: []language.Tag{language.TraditionalChinese},
+			expectedLocale:   language.TraditionalChinese,
+		},
+		{
+			name:             "prefer zh-Hans over zh-Hant when both supported",
+			acceptLanguage:   "zh",
+			supportedLocales: []language.Tag{language.SimplifiedChinese, language.TraditionalChinese},
+			expectedLocale:   language.SimplifiedChinese,
+		},
+		{
+			name:             "prefer exact zh over zh-Hans when zh is supported",
+			acceptLanguage:   "zh",
+			supportedLocales: []language.Tag{language.Chinese, language.SimplifiedChinese},
+			expectedLocale:   language.Chinese,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			r := chi.NewRouter()
+			r.Use(LocalizedRoute(tt.supportedLocales))
+			r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {})
+
+			req := httptest.NewRequest("GET", "/index.html", nil)
+			req.Header.Set("Accept-Language", tt.acceptLanguage)
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code < 300 || rec.Code >= 400 {
+				t.Fatalf("got status %d, expected redirect", rec.Code)
+			}
+
+			loc := rec.Header().Get("Location")
+			if loc == "" {
+				t.Fatalf("empty Location header")
+			}
+
+			tag, _, err := ParsePath(loc)
+			if err != nil {
+				t.Fatalf("parse location %q: %v", loc, err)
+			}
+			if tag != tt.expectedLocale {
+				t.Errorf("locale: got %v, want %v", tag, tt.expectedLocale)
+			}
+		})
+	}
+}
+
 func TestParsePath(t *testing.T) {
 	t.Parallel()
 
