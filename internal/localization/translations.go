@@ -10,6 +10,9 @@ type Strings struct {
 	WebsiteLogo    string
 }
 
+// InitTranslations should be called once on startup to load the translations.
+//
+// WARNING: This is not thread safe.
 func InitTranslations() {
 	for locale, values := range translations {
 		mustSetString(locale, "SelectLanguage", values.SelectLanguage)
@@ -17,15 +20,32 @@ func InitTranslations() {
 	}
 }
 
+// LoadFor loads UI translations for a locale.
+//
+// All languages represented by [language.Tag] are supported assuming that the
+// package's list does not become out of sync with our translations table
+// after an update.
 func LoadFor(locale language.Tag) Strings {
-	if locale == language.Und {
-		locale = language.English
-	}
-
+	locale = normalizeLocale(locale)
 	printer := message.NewPrinter(locale)
 	return Strings{
 		SelectLanguage: printer.Sprintf("SelectLanguage"),
 		WebsiteLogo:    printer.Sprintf("WebsiteLogo"),
+	}
+}
+
+func normalizeLocale(locale language.Tag) language.Tag {
+	switch {
+	case locale == language.Und:
+		return language.English
+	case locale == language.Chinese:
+		return language.SimplifiedChinese
+	case locale == language.SimplifiedChinese:
+		return language.SimplifiedChinese
+	case locale == language.TraditionalChinese:
+		return language.TraditionalChinese
+	default:
+		return locale
 	}
 }
 
