@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/subtributary/musings/internal/app"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/posts"
 	"github.com/subtributary/musings/internal/templates"
@@ -21,13 +20,13 @@ func main() {
 
 	services := loadServices(config)
 
-	server := app.NewServer(services, config)
+	server := NewServer(services, config)
 
 	fmt.Printf("Listening at %s\n", config.BindAddress)
 	log.Fatal(server.ListenAndServe())
 }
 
-func loadConfig() (config app.Config) {
+func loadConfig() (config Config) {
 	config.BindAddress = os.Getenv("MUSINGS_BIND_ADDRESS")
 	config.ContentPath = os.Getenv("MUSINGS_CONTENT_PATH")
 	config.WebPath = os.Getenv("MUSINGS_WEB_PATH")
@@ -50,7 +49,7 @@ func loadConfig() (config app.Config) {
 	return
 }
 
-func loadServices(config app.Config) (services app.Services) {
+func loadServices(config Config) (services Services) {
 	localization.InitTranslations()
 
 	services.PostParser = posts.NewParser()
