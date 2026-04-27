@@ -1,56 +1,61 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
+	"slices"
+
+	"golang.org/x/text/language"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		printHelpAndExit()
+	config := Config{}
+	if err := config.LoadFromEnv(); err != nil {
+		log.Fatalf("load from env: %v", err)
 	}
 
-	switch os.Args[1] {
-	case "index":
-		mainIndex(os.Args)
+	subcommand := ""
+	if len(os.Args) >= 2 {
+		subcommand = os.Args[1]
+	}
+
+	switch subcommand {
+	case "rebuild":
+		mainRebuild(config, os.Args[2:])
+	case "rebuild-file":
+		mainRebuildFile(config, os.Args[2:])
 	case "search":
-		mainSearch(os.Args)
+		mainSearch(config, os.Args[2:])
 	default:
-		printHelpAndExit()
+		log.Println("usage: indexer <subcommand>")
+		log.Println("subcommand options are: rebuild, rebuild-file, search")
+		os.Exit(1)
 	}
 }
 
-func mainIndex(args []string) {
-	if len(args) != 2 && len(args) != 3 {
-		printHelpAndExit()
-	}
-
-	config := IndexConfig{}
-	if err := config.LoadFromEnv(); err != nil {
-		log.Fatalf("invalid index config: %v", err)
-	}
-	config.LoadFromArgs(args[2:])
-
-	// todo: index logic
+func mainRebuild(config Config, args []string) {
 }
 
-func mainSearch(args []string) {
-	if len(args) != 3 {
-		printHelpAndExit()
-	}
-
-	config := SearchConfig{}
-	if err := config.LoadFromEnv(); err != nil {
-		log.Fatalf("invalid search config: %v", err)
-	}
-	config.LoadFromArgs(args[2:])
-
-	// todo: search logic
+func mainRebuildFile(config Config, args []string) {
+	//
 }
 
-func printHelpAndExit() {
-	log.Print("Usage:")
-	log.Print("  indexer index [path]")
-	log.Print("  indexer search <query>")
-	os.Exit(1)
+func mainSearch(config Config, args []string) {
+	cmd := flag.NewFlagSet("rebuild", flag.ExitOnError)
+	locale := cmd.String("locale", "", "locale to search")
+	query := cmd.String("query", "", "search query")
+	if err := cmd.Parse(args); err != nil {
+		log.Fatalf("parse args: %v", err)
+	}
+
+	tag, err := language.Parse(*locale)
+	if err != nil {
+		log.Fatalf("parse locale: %v", err)
+	}
+	if !slices.Contains(config.Locales, tag) {
+		log.Fatalf("locale not enabled: %s", *locale)
+	}
+
+	//
 }
