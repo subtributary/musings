@@ -1,20 +1,13 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"os"
-	"slices"
 
-	"golang.org/x/text/language"
+	"github.com/subtributary/musings/internal/config"
 )
 
 func main() {
-	config := Config{}
-	if err := config.LoadFromEnv(); err != nil {
-		log.Fatalf("load from env: %v", err)
-	}
-
 	subcommand := ""
 	if len(os.Args) >= 2 {
 		subcommand = os.Args[1]
@@ -22,11 +15,11 @@ func main() {
 
 	switch subcommand {
 	case "rebuild":
-		mainRebuild(config, os.Args[2:])
+		mainRebuild(os.Args[2:])
 	case "rebuild-file":
-		mainRebuildFile(config, os.Args[2:])
+		mainRebuildFile(os.Args[2:])
 	case "search":
-		mainSearch(config, os.Args[2:])
+		mainSearch(os.Args[2:])
 	default:
 		log.Println("usage: indexer <subcommand>")
 		log.Println("subcommand options are: rebuild, rebuild-file, search")
@@ -34,28 +27,30 @@ func main() {
 	}
 }
 
-func mainRebuild(config Config, args []string) {
-}
+func mainRebuild(args []string) {
+	configLoader := config.NewLoader()
+	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
+	config, _ := configLoader.Load(args)
 
-func mainRebuildFile(config Config, args []string) {
 	//
 }
 
-func mainSearch(config Config, args []string) {
-	cmd := flag.NewFlagSet("rebuild", flag.ExitOnError)
-	locale := cmd.String("locale", "", "locale to search")
-	query := cmd.String("query", "", "search query")
-	if err := cmd.Parse(args); err != nil {
-		log.Fatalf("parse args: %v", err)
-	}
+func mainRebuildFile(args []string) {
+	configLoader := config.NewLoader()
+	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
+	configLoader.Required("target", "file to re-index")
+	config, custom := configLoader.Load(args)
+	target := custom["target"]
 
-	tag, err := language.Parse(*locale)
-	if err != nil {
-		log.Fatalf("parse locale: %v", err)
-	}
-	if !slices.Contains(config.Locales, tag) {
-		log.Fatalf("locale not enabled: %s", *locale)
-	}
+	//
+}
+
+func mainSearch(args []string) {
+	configLoader := NewConfigLoader()
+	configLoader.Presets(ContentPath, DataPath, Locales)
+	configLoader.Required("query", "search query")
+	config, custom := configLoader.Load(args)
+	query := custom["query"]
 
 	//
 }
