@@ -32,7 +32,8 @@ func mainRebuild(args []string) {
 	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
 	config, _ := configLoader.Load(args)
 
-	//
+	log.Printf("config: %v", config)
+	log.Fatal("not implemented yet")
 }
 
 func mainRebuildFile(args []string) {
@@ -42,15 +43,19 @@ func mainRebuildFile(args []string) {
 	config, custom := configLoader.Load(args)
 	target := custom["target"]
 
-	//
+	log.Printf("config: %v", config)
+	log.Printf("target: %v", target)
+	log.Fatal("not implemented yet")
 }
 
 func mainSearch(args []string) {
-	configLoader := NewConfigLoader()
-	configLoader.Presets(ContentPath, DataPath, Locales)
+	configLoader := config.NewLoader()
+	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
 	configLoader.Required("query", "search query")
 	config, custom := configLoader.Load(args)
 	query := custom["query"]
 
-	//
+	log.Printf("config: %v", config)
+	log.Printf("query: %v", query)
+	log.Fatal("not implemented yet")
 }
