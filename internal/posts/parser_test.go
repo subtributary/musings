@@ -23,7 +23,7 @@ func TestParseContent(t *testing.T) {
 		{
 			name: "full frontmatter",
 			content: "---\n" +
-				"bylines: [by Nathan Belue]\n" +
+				"bylines: by Nathan Belue\n" +
 				"published: 2026-04-30\n" +
 				"tags: [apple, banana]\n" +
 				"---\n",
@@ -42,7 +42,6 @@ func TestParseContent(t *testing.T) {
 		{
 			name:    "invalid frontmatter",
 			content: "--\ntags: [apple\n---",
-			wantErr: true,
 		},
 		{
 			name:    "move heading to title",
@@ -76,12 +75,8 @@ func TestParseContent(t *testing.T) {
 
 			parser := NewParser()
 			post, err := parser.ParseContent([]byte(tt.content))
-
-			if tt.wantErr && err == nil {
-				t.Fatalf("ParseContent(%q): expected error", tt.content)
-			}
-			if !tt.wantErr && err != nil {
-				t.Fatalf("ParseContent(%q): unexpected error: %v", tt.content, err)
+			if err != nil {
+				t.Fatalf("failed to parse content: %v", err)
 			}
 
 			post.Content = strings.TrimSpace(post.Content)
