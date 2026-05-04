@@ -39,7 +39,7 @@ func TestDocument_Count(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			doc := NewDocument(strings.Split(tt.content, " "))
+			doc := NewDocumentOld(strings.Split(tt.content, " "))
 			freq := doc.Count(tt.word)
 			if freq != tt.want {
 				t.Errorf("Frequency: got %v, want %v", freq, tt.want)
@@ -50,7 +50,7 @@ func TestDocument_Count(t *testing.T) {
 
 func TestCorpus(t *testing.T) {
 	t.Parallel()
-	corpus := NewCorpus()
+	corpus := NewCorpusOld()
 
 	assertCount := func(word string, want int) {
 		t.Helper()
@@ -74,9 +74,9 @@ func TestCorpus(t *testing.T) {
 	}
 
 	// Populate corpus
-	corpus.Add("one", NewDocument([]string{"one"}))
-	corpus.Add("two", NewDocument([]string{"two", "two"}))
-	corpus.Add("three", NewDocument([]string{"three", "three", "three"}))
+	corpus.Add("one", NewDocumentOld([]string{"one"}))
+	corpus.Add("two", NewDocumentOld([]string{"two", "two"}))
+	corpus.Add("three", NewDocumentOld([]string{"three", "three", "three"}))
 	assertAvgDocSize(2.0)
 	assertCount("three", 1)
 	assertSize(3)

@@ -1,13 +1,13 @@
 package search
 
 type Index struct {
-	corpus Corpus
+	corpus CorpusOld
 	ranker BM25
 }
 
 func NewIndex() Index {
 	return Index{
-		corpus: NewCorpus(),
+		corpus: NewCorpusOld(),
 		ranker: NewBM25(1.2, 0.75),
 	}
 }
@@ -15,7 +15,7 @@ func NewIndex() Index {
 // Add analyzes a document and adds its data to the corpus.
 func (idx Index) Add(name string, text string) {
 	tokens := Tokenize(text)
-	idx.corpus.Add(name, NewDocument(tokens))
+	idx.corpus.Add(name, NewDocumentOld(tokens))
 }
 
 func (idx Index) Remove(name string) {

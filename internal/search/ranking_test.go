@@ -67,12 +67,12 @@ func TestBM25(t *testing.T) {
 }
 
 // buildCorpus builds a corpus, naming each document its content.
-func buildCorpus(t *testing.T, contents []string) Corpus {
+func buildCorpus(t *testing.T, contents []string) CorpusOld {
 	t.Helper()
-	corpus := NewCorpus()
+	corpus := NewCorpusOld()
 	for _, content := range contents {
 		filename := content
-		document := NewDocument(strings.Split(content, " "))
+		document := NewDocumentOld(strings.Split(content, " "))
 		corpus.Add(filename, document)
 	}
 	return corpus
