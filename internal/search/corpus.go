@@ -1,40 +1,48 @@
 package search
 
-import (
-	"maps"
-	"slices"
-)
-
-type Stream []string
-
-type Document struct {
-	Name    string
-	streams []Stream
+type Stream struct {
+	length     int
+	termCounts map[string]int
 }
 
-// Count returns the number of times a term appears in a stream.
-func (d Document) Count(i int, term string) (result int) {
-	for _, t := range d.streams[i] {
-		if t == term {
-			result++
-		}
+func newStream(tokens []string) (s Stream) {
+	s.length = len(tokens)
+	s.termCounts = make(map[string]int)
+	for _, term := range tokens {
+		s.termCounts[term]++
 	}
 	return
 }
 
-// Length returns the number of tokens in a stream.
-func (d Document) Length(i int) int {
-	return len(d.streams[i])
+type Document struct {
+	streams map[Field]Stream
 }
 
-func (d Document) UniqueWords() (result []string) {
+func NewDocument() (d Document) {
+	d.streams = make(map[Field]Stream)
+	return
+}
+
+func (d Document) SetStream(field Field, tokens []string) {
+	d.streams[field] = newStream(tokens)
+}
+
+// Count returns the number of times a term appears in a stream.
+func (d Document) Count(field Field, term string) (result int) {
+	return d.streams[field].termCounts[term]
+}
+
+// Length returns the number of tokens in a stream.
+func (d Document) Length(field Field) int {
+	return d.streams[field].length
+}
+
+func (d Document) uniqueWords() (result []string) {
 	visited := make(map[string]struct{})
 	for _, stream := range d.streams {
-		for _, token := range stream {
-			if _, ok := visited[token]; !ok {
-				result = append(result, token)
-				visited[token] = struct{}{}
-			}
+		for term := range stream.termCounts {
+			result = append(result, term)
+			visited[term] = struct{}{}
 		}
 	}
 	return
@@ -42,19 +50,27 @@ func (d Document) UniqueWords() (result []string) {
 
 type Corpus struct {
 	documents    map[string]Document
-	totalLengths []int          // Total stream lengths
 	docsWithTerm map[string]int // Number of documents containing each term
+	totalLengths map[Field]int  // Total stream lengths
 }
 
-// Add processes and saves a document.
-func (c *Corpus) Add(name string, document Document) {
+func NewCorpus() Corpus {
+	return Corpus{
+		documents:    make(map[string]Document),
+		docsWithTerm: make(map[string]int),
+		totalLengths: make(map[Field]int),
+	}
+}
+
+// Upsert processes and saves a document.
+func (c *Corpus) Upsert(name string, document Document) {
 	c.Remove(name)
 
 	c.documents[name] = document
-	for i, stream := range document.streams {
-		c.totalLengths[i] += len(stream)
+	for field, stream := range document.streams {
+		c.totalLengths[field] += stream.length
 	}
-	for _, word := range document.UniqueWords() {
+	for _, word := range document.uniqueWords() {
 		c.docsWithTerm[word]++
 	}
 }
@@ -63,19 +79,22 @@ func (c *Corpus) Add(name string, document Document) {
 func (c *Corpus) Remove(name string) {
 	if doc, ok := c.documents[name]; ok {
 		delete(c.documents, name)
-		for i, stream := range doc.streams {
-			c.totalLengths[i] -= len(stream)
+		for field, stream := range doc.streams {
+			c.totalLengths[field] -= stream.length
 		}
-		for _, word := range doc.UniqueWords() {
+		for _, word := range doc.uniqueWords() {
 			c.docsWithTerm[word]--
+			if c.docsWithTerm[word] == 0 {
+				delete(c.docsWithTerm, word)
+			}
 		}
 	}
 }
 
-// AverageStreamLength returns the average length of a stream across the corpus.
-func (c *Corpus) AverageStreamLength(i int) float64 {
+// AvgStreamLength returns the average length of a stream across the corpus.
+func (c *Corpus) AvgStreamLength(field Field) float64 {
 	if docCount := len(c.documents); docCount > 0 {
-		return float64(c.totalLengths[i]) / float64(docCount)
+		return float64(c.totalLengths[field]) / float64(docCount)
 	}
 	return 0
 }
@@ -86,8 +105,8 @@ func (c *Corpus) Count(term string) int {
 }
 
 // Documents returns the documents in the corpus.
-func (c *Corpus) Documents() []Document {
-	return slices.Collect(maps.Values(c.documents))
+func (c *Corpus) Documents() map[string]Document {
+	return c.documents
 }
 
 // Size returns the number of documents in the corpus.

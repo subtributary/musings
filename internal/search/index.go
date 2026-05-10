@@ -1,4 +1,4 @@
-package search
+package search /*
 
 type Index struct {
 	corpus CorpusOld
@@ -28,3 +28,4 @@ func (idx Index) Search(query string) []string {
 	queryTokens := Tokenize(query)
 	return idx.ranker.Search(idx.corpus, queryTokens)
 }
+*/
