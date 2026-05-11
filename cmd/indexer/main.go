@@ -3,54 +3,59 @@ package main
 import (
 	"log"
 	"os"
+
+	"github.com/subtributary/musings/internal/config"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		printHelpAndExit()
+	subcommand := ""
+	if len(os.Args) >= 2 {
+		subcommand = os.Args[1]
 	}
 
-	switch os.Args[1] {
-	case "index":
-		mainIndex(os.Args)
+	switch subcommand {
+	case "rebuild":
+		mainRebuild(os.Args[2:])
+	case "rebuild-file":
+		mainRebuildFile(os.Args[2:])
 	case "search":
-		mainSearch(os.Args)
+		mainSearch(os.Args[2:])
 	default:
-		printHelpAndExit()
+		log.Println("usage: indexer <subcommand>")
+		log.Println("subcommand options are: rebuild, rebuild-file, search")
+		os.Exit(1)
 	}
 }
 
-func mainIndex(args []string) {
-	if len(args) != 2 && len(args) != 3 {
-		printHelpAndExit()
-	}
+func mainRebuild(args []string) {
+	configLoader := config.NewLoader()
+	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
+	config, _ := configLoader.Load(args)
 
-	config := IndexConfig{}
-	if err := config.LoadFromEnv(); err != nil {
-		log.Fatalf("invalid index config: %v", err)
-	}
-	config.LoadFromArgs(args[2:])
+	log.Printf("config: %v", config)
+	log.Fatal("not implemented yet")
+}
 
-	// todo: index logic
+func mainRebuildFile(args []string) {
+	configLoader := config.NewLoader()
+	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
+	configLoader.Required("target", "file to re-index")
+	config, custom := configLoader.Load(args)
+	target := custom["target"]
+
+	log.Printf("config: %v", config)
+	log.Printf("target: %v", target)
+	log.Fatal("not implemented yet")
 }
 
 func mainSearch(args []string) {
-	if len(args) != 3 {
-		printHelpAndExit()
-	}
+	configLoader := config.NewLoader()
+	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
+	configLoader.Required("query", "search query")
+	config, custom := configLoader.Load(args)
+	query := custom["query"]
 
-	config := SearchConfig{}
-	if err := config.LoadFromEnv(); err != nil {
-		log.Fatalf("invalid search config: %v", err)
-	}
-	config.LoadFromArgs(args[2:])
-
-	// todo: search logic
-}
-
-func printHelpAndExit() {
-	log.Print("Usage:")
-	log.Print("  indexer index [path]")
-	log.Print("  indexer search <query>")
-	os.Exit(1)
+	log.Printf("config: %v", config)
+	log.Printf("query: %v", query)
+	log.Fatal("not implemented yet")
 }
