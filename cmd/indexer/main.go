@@ -3,8 +3,11 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/subtributary/musings/internal/config"
+	"github.com/subtributary/musings/internal/localization"
+	"golang.org/x/text/language"
 )
 
 func main() {
@@ -30,11 +33,56 @@ func main() {
 func mainRebuild(args []string) {
 	configLoader := config.NewLoader()
 	configLoader.Presets(config.ContentPath, config.DataPath, config.Locales)
-	config, _ := configLoader.Load(args)
+	cfg, _ := configLoader.Load(args)
 
-	log.Printf("config: %v", config)
-	log.Fatal("not implemented yet")
+	if len(cfg.Locales) == 0 {
+		log.Printf("no locales specified")
+		return
+	}
+
+	root, err := os.OpenRoot(cfg.ContentPath)
+	if err != nil {
+		log.Fatalf("open root: %v", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	files := make(map[language.Tag][]string)
+	dirQueue := []string{"/"}
+	visited := make(map[string]struct{})
+	for len(dirQueue) > 0 {
+		dirName := dirQueue[0]
+
+		dir, err := root.OpenRoot(dirName)
+		if err != nil {
+			log.Fatalf("open dir %q: %v", dirQueue[0], err)
+		}
+
+		result, err := localization.Scan(dir.FS())
+		if err != nil {
+			log.Fatalf("scan dir %q: %v", dirQueue[0], err)
+		}
+
+		for locale, entries := range result.GroupByTag(cfg.Locales) {
+			for _, entry := range entries {
+				path := filepath.Join(dirName, entry.Name())
+				if entry.IsDir() {
+					if _, ok := visited[path]; !ok {
+						dirQueue = append(dirQueue, path)
+						visited[path] = struct{}{}
+					}
+					continue
+				}
+				files[locale] = append(files[locale], path)
+			}
+		}
+	}
 }
+
+/*
+func rebuildDir(idx posts.Index, prefix string, dirFS fs.FS, locales []language.Tag) error {
+	//
+	return nil
+}*/
 
 func mainRebuildFile(args []string) {
 	configLoader := config.NewLoader()

@@ -1,13 +1,12 @@
 module github.com/subtributary/musings
 
-go 1.25.7
+go 1.25.9
 
 require (
-	github.com/clipperhouse/uax29/v2 v2.7.0
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/yuin/goldmark v1.7.16
 	go.abhg.dev/goldmark/frontmatter v0.3.0
-	golang.org/x/text v0.35.0
+	golang.org/x/text v0.37.0
 )
 
 require (
