@@ -6,6 +6,7 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/subtributary/search"
 )
@@ -52,8 +53,8 @@ func (idx Index) Search(query string) iter.Seq[SearchResult] {
 	return func(yield func(SearchResult) bool) {
 		for r := range idx.wrapped.Search(query) {
 			if !yield(SearchResult{
-				Path:  r.Id,
-				Title: r.Attachments["display_title"],
+				Path:  r.Attachments["att_path"],
+				Title: r.Attachments["att_title"],
 			}) {
 				return
 			}
@@ -62,17 +63,20 @@ func (idx Index) Search(query string) iter.Seq[SearchResult] {
 }
 
 func (idx Index) Upsert(path string, post ParsedPost) error {
-	return idx.wrapped.Upsert(path, map[string]string{
-		"title":         post.Title,
-		"content":       post.Content,
-		"display_title": post.Title,
+	id := post.Published.Format("20060102T150405") + path
+	path = strings.TrimRight(path, ".md")
+	return idx.wrapped.Upsert(id, map[string]string{
+		"title":     post.Title,
+		"content":   string(post.Content),
+		"att_path":  path,
+		"att_title": post.Title,
 	})
 }
 
 func databasePath(dataPath, locale string) string {
-	if locale == "" {
+	locale = strings.ToLower(locale)
+	if locale == "" || locale == "und" {
 		return filepath.Join(dataPath, "index.json")
 	}
 	return filepath.Join(dataPath, "index."+locale+".json")
-
 }

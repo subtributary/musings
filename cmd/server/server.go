@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -50,7 +51,11 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if err := s.writeTemplate(w, r, "index", nil); err != nil {
+	query := r.URL.Query().Get("q")
+	locale := localization.LocaleFromContext(r.Context())
+	index := s.services.PostIndexes[locale]
+	results := slices.Collect(index.Search(query))
+	if err := s.writeTemplate(w, r, "index", results); err != nil {
 		writeError(w, err)
 	}
 }
@@ -90,7 +95,7 @@ func (s *Server) servePost(w http.ResponseWriter, r *http.Request, path string) 
 	// todo: handle http head here please
 
 	path += ".md"
-	data, err := s.services.PostParser.Parse(localizedFS, path)
+	data, err := s.services.PostParser.ParseFile(localizedFS, path)
 	if err != nil {
 		return err
 	}

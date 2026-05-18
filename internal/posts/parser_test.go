@@ -79,8 +79,9 @@ func TestParseContent(t *testing.T) {
 				t.Fatalf("failed to parse content: %v", err)
 			}
 
-			post.Content = strings.TrimSpace(post.Content)
-			if post.Content != tt.want.Content {
+			gotContent := strings.TrimSpace(string(post.Content))
+			wantContent := string(tt.want.Content)
+			if gotContent != wantContent {
 				t.Errorf("post.Content: got %v, want %v", post.Content, tt.want.Content)
 			}
 

@@ -4,7 +4,13 @@
 <body>
 {{template "partials/header" .}}
 <main>
-    Content goes here.
+    {{range .Data}}
+        <a href="{{.Path}}">
+            <section>
+                <h2>{{.Title}}</h2>
+            </section>
+        </a>
+    {{end}}
 </main>
 </body>
 </html>

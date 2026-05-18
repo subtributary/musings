@@ -19,7 +19,7 @@ func main() {
 	flag.StringVar(&locale, "locale", "", "")
 	flag.Usage = printUsage
 	flag.Parse()
-	if flag.NArg() != 1 {
+	if flag.NArg() > 1 {
 		printUsage()
 		os.Exit(1)
 	}
