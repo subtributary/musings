@@ -95,7 +95,7 @@ func (s *Server) servePost(w http.ResponseWriter, r *http.Request, path string) 
 	// todo: handle http head here please
 
 	path += ".md"
-	data, err := s.services.PostParser.Parse(localizedFS, path)
+	data, err := s.services.PostParser.ParseFile(localizedFS, path)
 	if err != nil {
 		return err
 	}

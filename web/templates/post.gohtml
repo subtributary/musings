@@ -4,7 +4,20 @@
 <body>
 {{template "partials/header" .}}
 <main>
-    {{.Data.HtmlContent}}
+    <header>
+        <h1>{{.Data.Title}}</h1>
+        {{range .Data.Bylines}}
+            <div>{{.}}</div>
+        {{end}}
+        <div>Published: {{.Data.Published}}</div>
+        <br /> <!-- I'll do styling later. -->
+    </header>
+    {{.Data.Content}}
+    <footer>
+        {{range .Data.Tags}}
+            <div>#{{.}}</div>
+        {{end}}
+    </footer>
 </main>
 </body>
 </html>

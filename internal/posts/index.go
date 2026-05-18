@@ -67,7 +67,7 @@ func (idx Index) Upsert(path string, post ParsedPost) error {
 	path = strings.TrimRight(path, ".md")
 	return idx.wrapped.Upsert(id, map[string]string{
 		"title":     post.Title,
-		"content":   post.Content,
+		"content":   string(post.Content),
 		"att_path":  path,
 		"att_title": post.Title,
 	})

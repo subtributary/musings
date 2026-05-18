@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -17,7 +18,7 @@ import (
 
 type ParsedPost struct {
 	Title     string
-	Content   string
+	Content   template.HTML
 	Bylines   []string
 	Published *time.Time
 	Tags      []string
@@ -62,17 +63,17 @@ func (s Parser) ParseContent(content []byte) (ParsedPost, error) {
 	}
 	parsedContent := string(buf.Bytes())
 
-	frontmatter, err := parseFrontmatter(context)
+	fm, err := parseFrontmatter(context)
 	if err != nil {
 		return ParsedPost{}, fmt.Errorf("parse frontmatter: %w", err)
 	}
 
 	return ParsedPost{
 		Title:     getTitle(context),
-		Content:   parsedContent,
-		Bylines:   frontmatter.Bylines,
-		Tags:      frontmatter.Tags,
-		Published: parsePostTime(frontmatter.Published),
+		Content:   template.HTML(parsedContent),
+		Bylines:   fm.Bylines,
+		Tags:      fm.Tags,
+		Published: parsePostTime(fm.Published),
 	}, nil
 }
 
@@ -103,24 +104,6 @@ func parseFrontmatter(context parser.Context) (result postFrontmatter, err error
 	return
 }
 
-func (s Parser) Parse(fileSystem fs.FS, name string) (PostData, error) {
-	contents, err := fs.ReadFile(fileSystem, name)
-	if err != nil {
-		return PostData{}, fmt.Errorf("could not read file %q: %w", name, err)
-	}
-
-	buffer := bytes.Buffer{}
-	err = s.markdown.Convert(contents, &buffer)
-	if err != nil {
-		return PostData{}, fmt.Errorf("could not parse file %q: %w", name, err)
-	}
-	html := buffer.String()
-
-	return PostData{
-		HtmlContent: template.HTML(html),
-	}, nil
-}
-
 var titleKey = parser.NewContextKey()
 
 func getTitle(pc parser.Context) string {
@@ -133,7 +116,7 @@ func getTitle(pc parser.Context) string {
 type removeH1Transformer struct{}
 
 func (t *removeH1Transformer) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
-	ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
@@ -153,13 +136,18 @@ func (t *removeH1Transformer) Transform(doc *ast.Document, reader text.Reader, p
 		heading.Parent().RemoveChild(heading.Parent(), heading)
 		return ast.WalkStop, nil
 	})
+
+	// We should never get an error since we never return one in the walker.
+	if err != nil {
+		log.Fatalf("Unexpected error walking AST: %v", err)
+	}
 }
 
 // headingPlainText extracts the text from a heading, ignoring any formatting.
 func headingPlainText(heading *ast.Heading, source []byte) string {
 	var buf bytes.Buffer
 
-	ast.Walk(heading, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+	err := ast.Walk(heading, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
 		}
@@ -181,6 +169,11 @@ func headingPlainText(heading *ast.Heading, source []byte) string {
 
 		return ast.WalkContinue, nil
 	})
+
+	// We should never get an error since we never return one in the walker.
+	if err != nil {
+		log.Fatalf("Unexpected error walking AST: %v", err)
+	}
 
 	return buf.String()
 }
