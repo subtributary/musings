@@ -45,6 +45,14 @@ func NewParser() Parser {
 	}
 }
 
+func (s Parser) ParseFile(dir fs.FS, path string) (ParsedPost, error) {
+	if content, err := fs.ReadFile(dir, path); err != nil {
+		return ParsedPost{}, fmt.Errorf("read file: %v", err)
+	} else {
+		return s.ParseContent(content)
+	}
+}
+
 func (s Parser) ParseContent(content []byte) (ParsedPost, error) {
 	context := parser.NewContext()
 
