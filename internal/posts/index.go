@@ -3,6 +3,7 @@ package posts
 import (
 	"encoding/json"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 
@@ -42,6 +43,24 @@ func (idx Index) SaveIndex(dataPath string, locale string) error {
 	return nil
 }
 
+type SearchResult struct {
+	Path  string
+	Title string
+}
+
+func (idx Index) Search(query string) iter.Seq[SearchResult] {
+	return func(yield func(SearchResult) bool) {
+		for r := range idx.wrapped.Search(query) {
+			if !yield(SearchResult{
+				Path:  r.Id,
+				Title: r.Attachments["display_title"],
+			}) {
+				return
+			}
+		}
+	}
+}
+
 func (idx Index) Upsert(path string, post ParsedPost) error {
 	return idx.wrapped.Upsert(path, map[string]string{
 		"title":         post.Title,
@@ -53,7 +72,7 @@ func (idx Index) Upsert(path string, post ParsedPost) error {
 func databasePath(dataPath, locale string) string {
 	if locale == "" {
 		return filepath.Join(dataPath, "index.json")
-	} else {
-		return filepath.Join(dataPath, "index."+locale+".json")
 	}
+	return filepath.Join(dataPath, "index."+locale+".json")
+
 }

@@ -27,15 +27,6 @@ func main() {
 	}
 	target = flag.Arg(0)
 
-	index, err := posts.LoadIndex(DataPath, locale)
-	if err != nil {
-		log.Printf("Error loading index: %v", err)
-		if index, err = posts.NewIndex(); err != nil {
-			log.Fatalf("Error creating new index: %v", err)
-		}
-		log.Println("Created new index. Continuing.")
-	}
-
 	contentPath := filepath.Join(ContentPath, locale)
 	root, err := os.OpenRoot(contentPath)
 	if err != nil {
@@ -43,15 +34,24 @@ func main() {
 	}
 	defer func() { _ = root.Close() }()
 
+	var index posts.Index
 	if target == "" {
-		indexDirectory(index, root.FS())
-	} else if rel, err := filepath.Rel(contentPath, target); err != nil {
-		log.Fatal("Target path is not within the content directory.")
-	} else if err := indexFile(index, root.FS(), rel); err != nil {
-		log.Fatalf("Error indexing file: %v", err)
+		if index, err = posts.NewIndex(); err != nil {
+			log.Fatalf("Error creating index: %v", err)
+		}
+		if err = indexDir(index, root.FS()); err != nil {
+			log.Fatalf("Error indexing directory: %v", err)
+		}
+	} else {
+		if index, err = posts.LoadIndex(DataPath, locale); err != nil {
+			log.Fatalf("Error loading index: %v", err)
+		}
+		if err = indexFile(index, root.FS(), target); err != nil {
+			log.Fatalf("Error indexing file: %v", err)
+		}
 	}
 
-	if err := index.SaveIndex(DataPath, locale); err != nil {
+	if err = index.SaveIndex(DataPath, locale); err != nil {
 		log.Fatalf("Error saving index: %v", err)
 	}
 }
@@ -68,8 +68,8 @@ func printUsage() {
 	fmt.Println("  --locale <tag>  Set the locale for the index. [default: none]")
 }
 
-func indexDirectory(index posts.Index, dir fs.FS) {
-	err := fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
+func indexDir(index posts.Index, dir fs.FS) error {
+	return fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
 		}
@@ -77,12 +77,11 @@ func indexDirectory(index posts.Index, dir fs.FS) {
 			return fmt.Errorf("file info: %v", err)
 		} else if !info.Mode().IsRegular() {
 			return nil
+		} else if filepath.Ext(path) != ".md" {
+			return nil
 		}
 		return indexFile(index, dir, path)
 	})
-	if err != nil {
-		log.Fatalf("Error indexing directory: %v", err)
-	}
 }
 
 func indexFile(index posts.Index, dir fs.FS, path string) error {
