@@ -12,6 +12,10 @@ import (
 	"golang.org/x/text/language"
 )
 
+const (
+	DataPath = "./data/"
+)
+
 func main() {
 	config := loadConfig()
 	if sane, err := config.IsSane(); !sane {
@@ -53,6 +57,16 @@ func loadServices(config Config) (services Services) {
 	localization.InitTranslations()
 
 	services.PostParser = posts.NewParser()
+
+	services.PostIndexes = make(map[language.Tag]posts.Index)
+	for _, tag := range config.Locales {
+		locale := tag.String()
+		if index, err := posts.LoadIndex(DataPath, locale); err != nil {
+			log.Fatalf("could not load index: %v", err)
+		} else {
+			services.PostIndexes[tag] = index
+		}
+	}
 
 	if config.EnableLiveTemplates {
 		services.TemplateStore = templates.NewLiveStore(config.GetTemplatesPath(), config.Locales)
