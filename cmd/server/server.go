@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -31,7 +32,9 @@ func NewServer(services Services, config Config) *Server {
 	s.router.Use(middleware.Logger)
 	s.router.Use(localization.LocalizedRoute(s.config.Locales))
 	s.router.Get("/", s.handleIndex)
-	s.router.Get("/_static/*", s.handleStatic)
+	s.router.Handle("/_static/*", http.StripPrefix("/_static/",
+		http.FileServer(http.Dir(s.config.GetStaticPath())),
+	))
 	s.router.Get("/*", s.handleContent)
 
 	return &s
@@ -42,9 +45,40 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
-	path := chi.URLParam(r, "*")
-	if err := serveFile(w, r, s.config.ContentPath, path); err != nil {
-		if err = s.servePost(w, r, path); err != nil {
+	path := chi.URLParam(r, "*") + ".md"
+
+	root, err := os.OpenRoot(s.config.ContentPath)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	defer func() { _ = root.Close() }()
+
+	info, err := fs.Stat(root.FS(), path)
+	if err != nil {
+		// It's not a markdown file, so use the Go file server.
+		fileServer := http.FileServer(http.Dir(s.config.ContentPath))
+		fileServer.ServeHTTP(w, r)
+		return
+	}
+	modTime := info.ModTime().UTC().Truncate(time.Second)
+
+	if t, err := http.ParseTime(r.Header.Get("If-Modified-Since")); err == nil {
+		log.Printf("modTime: %v, t: %v", modTime, t)
+		if !modTime.After(t) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+
+	w.Header().Set("Last-Modified", modTime.Format(http.TimeFormat))
+
+	if r.Method != "HEAD" {
+		data, err := s.services.PostParser.ParseFile(root.FS(), path)
+		if err != nil {
+			writeError(w, err)
+		}
+		if err = s.writeTemplate(w, r, "post", data); err != nil {
 			writeError(w, err)
 		}
 	}
@@ -58,48 +92,6 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if err := s.writeTemplate(w, r, "index", results); err != nil {
 		writeError(w, err)
 	}
-}
-
-func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	path := chi.URLParam(r, "*")
-	if err := serveFile(w, r, s.config.GetStaticPath(), path); err != nil {
-		writeError(w, err)
-	}
-}
-
-func serveFile(w http.ResponseWriter, r *http.Request, rootPath string, name string) error {
-	root, err := os.OpenRoot(rootPath)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = root.Close() }()
-	locale := localization.LocaleFromContext(r.Context())
-	localizedFS := localization.NewLocalizedFS(root.FS(), locale)
-
-	// If the file exists, then serve it.
-	if _, err = fs.Stat(localizedFS, name); err == nil {
-		http.ServeFileFS(w, r, localizedFS, name)
-	}
-	return err
-}
-
-func (s *Server) servePost(w http.ResponseWriter, r *http.Request, path string) error {
-	root, err := os.OpenRoot(s.config.ContentPath)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = root.Close() }()
-	locale := localization.LocaleFromContext(r.Context())
-	localizedFS := localization.NewLocalizedFS(root.FS(), locale)
-
-	// todo: handle http head here please
-
-	path += ".md"
-	data, err := s.services.PostParser.ParseFile(localizedFS, path)
-	if err != nil {
-		return err
-	}
-	return s.writeTemplate(w, r, "post", data)
 }
 
 func writeError(w http.ResponseWriter, err error) {
