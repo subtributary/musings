@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/subtributary/musings/internal/config"
 	"github.com/subtributary/musings/internal/localization"
 )
 
@@ -22,9 +23,9 @@ type Server struct {
 	services Services
 }
 
-func NewServer(services Services, config Config) *Server {
+func NewServer(services Services, cfg Config) *Server {
 	s := Server{
-		config:   config,
+		config:   cfg,
 		router:   chi.NewRouter(),
 		services: services,
 	}
@@ -33,7 +34,7 @@ func NewServer(services Services, config Config) *Server {
 	s.router.Use(localization.LocalizedRoute(s.config.Locales))
 	s.router.Get("/", s.handleIndex)
 	s.router.Handle("/_static/*", http.StripPrefix("/_static/",
-		http.FileServer(http.Dir(s.config.GetStaticPath())),
+		http.FileServer(http.Dir(config.StaticPath)),
 	))
 	s.router.Get("/*", s.handleContent)
 
@@ -47,7 +48,7 @@ func (s *Server) ListenAndServe() error {
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	path := chi.URLParam(r, "*") + ".md"
 
-	root, err := os.OpenRoot(s.config.ContentPath)
+	root, err := os.OpenRoot(config.ContentPath)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -57,7 +58,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	info, err := fs.Stat(root.FS(), path)
 	if err != nil {
 		// It's not a markdown file, so use the Go file server.
-		fileServer := http.FileServer(http.Dir(s.config.ContentPath))
+		fileServer := http.FileServer(http.Dir(config.ContentPath))
 		fileServer.ServeHTTP(w, r)
 		return
 	}

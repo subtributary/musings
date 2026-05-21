@@ -1,28 +1,54 @@
 package config
 
 import (
-	"log"
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/text/language"
 )
 
-type Config struct {
-	AssetsPath  string // AssetsPath is the path to the website assets directory.
-	ContentPath string // ContentPath is the path to the website content directory.
-	DataPath    string // DataPath is the path to the data directory.
-	BindAddress string // BindAddress is the address for the website to listen on.
-
-	locales string         // Locales is a comma-separated list of locales to consider or support.
-	Locales []language.Tag // Locales is a processed version of locales.
+type configFile struct {
+	Locales []string `json:"locales"`
 }
 
-func (c *Config) process() {
-	tags, _, err := language.ParseAcceptLanguage(c.locales)
-	if err != nil {
-		log.Fatalf("could not parse locales: %v", err)
+func (cf *configFile) apply(c *Global) error {
+	c.Locales = make([]language.Tag, len(cf.Locales))
+
+	for i, locale := range cf.Locales {
+		tag, err := language.Parse(locale)
+		if err != nil {
+			return fmt.Errorf("parse locale %q", locale)
+		}
+
+		c.Locales[i] = tag
 	}
-	if len(tags) == 0 {
-		tags = []language.Tag{language.Und}
+
+	return nil
+}
+
+// Global is the global Musings configuration for the build.
+// It does not contain per-environment or per-app configurations.
+type Global struct {
+	Locales []language.Tag
+}
+
+// Load loads the global config from the default config file.
+func Load() (cfg Global, _ error) {
+	path := filepath.Join(DataPath, "config.json")
+	if data, err := os.ReadFile(path); err != nil {
+		return Global{}, fmt.Errorf("read config: %w", err)
+	} else if err = json.Unmarshal(data, &cfg); err != nil {
+		return Global{}, fmt.Errorf("parse config: %w", err)
 	}
-	c.Locales = tags
+	return cfg, nil
+}
+
+func (c *Global) UnmarshalJSON(data []byte) error {
+	var cf configFile
+	if err := json.Unmarshal(data, &cf); err != nil {
+		return err
+	}
+	return cf.apply(c)
 }
