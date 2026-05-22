@@ -1,58 +1,31 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"log"
-	"os"
+	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/subtributary/musings/internal/localization"
-	"github.com/subtributary/musings/internal/posts"
-	"github.com/subtributary/musings/internal/templates"
-	"golang.org/x/text/language"
-)
-
-const (
-	DataPath = "./data/"
 )
 
 func main() {
-	config := loadConfig()
-	if sane, err := config.IsSane(); !sane {
-		log.Fatal(err)
-	}
-
-	services := loadServices(config)
-
-	server := NewServer(services, config)
-
-	fmt.Printf("Listening at %s\n", config.BindAddress)
-	log.Fatal(server.ListenAndServe())
-}
-
-func loadConfig() (config Config) {
-	config.BindAddress = os.Getenv("MUSINGS_BIND_ADDRESS")
-	config.ContentPath = os.Getenv("MUSINGS_CONTENT_PATH")
-	config.WebPath = os.Getenv("MUSINGS_WEB_PATH")
-	locales := os.Getenv("MUSINGS_LOCALES")
-
-	flag.BoolVar(&config.EnableLiveTemplates, "live-templates", false, "Do not cache template files")
-	flag.StringVar(&config.BindAddress, "web-endpoint", config.BindAddress, "Web endpoint to listen at")
-	flag.StringVar(&locales, "locales", locales, "Supported locales")
-	flag.Parse()
-
-	tags, _, err := language.ParseAcceptLanguage(locales)
+	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("could not parse locales: %v", err)
+		log.Fatalf("Error loading config: %v", err)
 	}
-	if len(tags) == 0 {
-		tags = []language.Tag{language.Und}
-	}
-	config.Locales = tags
 
-	return
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(localization.LocalizedRoute(cfg.Locales))
+
+	log.Printf("Listening at %s\n", cfg.BindAddress)
+	log.Fatal(http.ListenAndServe(cfg.BindAddress, router))
 }
 
+//
+
+/*
 func loadServices(config Config) (services Services) {
 	localization.InitTranslations()
 
@@ -80,3 +53,4 @@ func loadServices(config Config) (services Services) {
 
 	return
 }
+*/

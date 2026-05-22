@@ -2,60 +2,67 @@ package main
 
 import (
 	"errors"
+	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
-	"golang.org/x/text/language"
+	"github.com/subtributary/musings/internal/config"
+)
+
+const (
+	DefaultBindAddress = ":8080"
 )
 
 type Config struct {
-	BindAddress         string         // Address to listen at
-	ContentPath         string         // Path to website content
-	WebPath             string         // Path to website assets
-	EnableLiveTemplates bool           // Do not cache template files
-	Locales             []language.Tag // Supported locales
+	config.Global
+
+	BindAddress   string
+	LiveTemplates bool
 }
 
-func (config Config) IsSane() (bool, error) {
-	if config.BindAddress == "" {
-		return false, errors.New("bind address is not specified")
-	}
-	if config.ContentPath == "" {
-		return false, errors.New("content path is not specified")
-	}
-	if config.WebPath == "" {
-		return false, errors.New("web path is not specified")
+func LoadConfig() (Config, error) {
+	base, err := config.Load()
+	if err != nil {
+		return Config{}, err
 	}
 
-	// Errors from inaccessible directories may not be immediate, so we must check their readability here.
-	_, err := os.ReadDir(config.ContentPath)
+	cfg, err := LoadAppConfig(os.Args, os.Getenv)
 	if err != nil {
-		return false, errors.New("content path is not accessible")
-	}
-	_, err = os.ReadDir(config.WebPath)
-	if err != nil {
-		return false, errors.New("web path is not accessible")
-	}
-	_, err = os.ReadDir(config.GetStaticPath())
-	if err != nil {
-		return false, errors.New("static path is not accessible")
-	}
-	_, err = os.ReadDir(config.GetTemplatesPath())
-	if err != nil {
-		return false, errors.New("templates path is not accessible")
+		return Config{}, err
 	}
 
-	// The format needed for `config.BindAddress` is not well-defined, so it cannot be simply validated.
-	// Luckily, an invalid value will cause an immediate error.
-	// I will rely on that quick failure instead of trying to validate the endpoint here.
-
-	return true, nil
+	cfg.Global = base
+	return cfg, nil
 }
 
-func (config Config) GetStaticPath() string {
-	return filepath.Join(config.WebPath, "static")
+func LoadAppConfig(args []string, getenv func(string) string) (cfg Config, err error) {
+	cfg.BindAddress = DefaultBindAddress
+
+	if v := getenv("MUSINGS_BIND"); v != "" {
+		cfg.BindAddress = v
+	}
+
+	fs := flag.NewFlagSet("server", flag.ContinueOnError)
+	fs.StringVar(&cfg.BindAddress, "bind", cfg.BindAddress, "")
+	fs.BoolVar(&cfg.LiveTemplates, "live-templates", false, "")
+	fs.Usage = printUsage
+
+	err = fs.Parse(args)
+	if err == nil && fs.NArg() > 0 {
+		err = errors.New("unexpected positional argument")
+	}
+
+	return
 }
 
-func (config Config) GetTemplatesPath() string {
-	return filepath.Join(config.WebPath, "templates")
+func printUsage() {
+	program := filepath.Base(os.Args[0])
+	fmt.Println("Musings website server.")
+	fmt.Println()
+	fmt.Printf("Usage: %s [options]", program)
+	fmt.Println()
+	fmt.Println("Options:")
+	fmt.Printf("  --bind <address>  Web endpoint to listen at. [default: %s]\n", DefaultBindAddress)
+	fmt.Println("  --live-templates  Reload templates for every request.")
 }
