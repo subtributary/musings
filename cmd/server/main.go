@@ -1,25 +1,29 @@
 package main
 
+import (
+	"log"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/subtributary/musings/internal/localization"
+)
+
 func main() {
-	/*
-		var liveTemplates bool
-		var address string
-		flag.BoolVar(&liveTemplates, "live-templates", false, "")
-		flag.StringVar(&address, "bind", DefaultBindAddress, "")
-		flag.Usage = printUsage
-		flag.Parse()
-		if flag.NArg() > 1 {
-			printUsage()
-			os.Exit(1)
-		}
+	cfg, err := LoadConfig()
+	if err != nil {
+		log.Fatalf("Error loading config: %v", err)
+	}
 
-		services := loadServices(config)
+	router := chi.NewRouter()
+	router.Use(middleware.Logger)
+	router.Use(localization.LocalizedRoute(cfg.Locales))
 
-		server := NewServer(services, config)
-
-		fmt.Printf("Listening at %s\n", config.BindAddress)
-		log.Fatal(server.ListenAndServe())*/
+	log.Printf("Listening at %s\n", cfg.BindAddress)
+	log.Fatal(http.ListenAndServe(cfg.BindAddress, router))
 }
+
+//
 
 /*
 func loadServices(config Config) (services Services) {
