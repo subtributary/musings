@@ -115,7 +115,7 @@ func (s *Server) writeTemplate(w http.ResponseWriter, r *http.Request, name stri
 		Data:             data,
 	})
 
-	tmpl, err := s.services.TemplateStore.Lookup(name, locale)
+	tmpl, err := s.services.TemplateStore.Lookup(name)
 	if err != nil {
 		return fmt.Errorf("template %q not found: %w", name, err)
 	}
