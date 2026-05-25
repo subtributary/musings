@@ -40,15 +40,18 @@ type ViewFactory struct {
 	store   templates.Store
 }
 
-func LoadViewFactory(cfg Config) (f *ViewFactory, err error) {
-	f.locales = cfg.Locales
-
-	f.store, err = templates.NewStore(config.TemplatesPath, cfg.LiveTemplates)
-	if err != nil {
-		return f, fmt.Errorf("load templates: %v", err)
+func LoadViewFactory(cfg Config) (*ViewFactory, error) {
+	f := &ViewFactory{
+		locales: cfg.Locales,
 	}
 
-	return
+	store, err := templates.NewStore(config.TemplatesPath, cfg.LiveTemplates)
+	if err != nil {
+		return nil, fmt.Errorf("load templates: %v", err)
+	}
+	f.store = store
+
+	return f, nil
 }
 
 func (f *ViewFactory) Create(r *http.Request, name string, opts ...ViewOption) (View, error) {

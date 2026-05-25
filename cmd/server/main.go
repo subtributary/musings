@@ -49,14 +49,14 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := currentRoutePath(r) + ".md"
-
 		root, err := os.OpenRoot(config.ContentPath)
 		if err != nil {
 			writeError(w, err)
 			return
 		}
 		defer func() { _ = root.Close() }()
+
+		path := currentRoutePath(r) + ".md"
 
 		info, err := fs.Stat(root.FS(), path)
 		if err != nil {
