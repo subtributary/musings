@@ -45,23 +45,24 @@ func currentRoutePath(r *http.Request) string {
 }
 
 func contentHandler(views *ViewFactory) http.HandlerFunc {
-	fallback := http.FileServer(http.Dir(config.ContentPath))
+	root, err := os.OpenRoot(config.ContentPath)
+	if err != nil {
+		log.Fatalf("error opening content root: %v", err)
+	}
+
+	fallback := http.FileServerFS(root.FS())
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		root, err := os.OpenRoot(config.ContentPath)
-		if err != nil {
-			writeError(w, err)
-			return
-		}
-		defer func() { _ = root.Close() }()
-
 		path := currentRoutePath(r) + ".md"
 
 		info, err := fs.Stat(root.FS(), path)
-		if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
 			// It's not a Markdown file, so use the Go file server.
 			fallback.ServeHTTP(w, r)
+			return
+		} else if err != nil {
+			writeError(w, err)
 			return
 		}
 
