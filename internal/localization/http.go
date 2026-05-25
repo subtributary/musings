@@ -29,10 +29,6 @@ func withLocale(ctx context.Context, tag language.Tag) context.Context {
 // include [language.Und]. In any case, it also sets the discovered locale in
 // the context.
 func LocalizedRoute(tags []language.Tag) func(next http.Handler) http.Handler {
-	if len(tags) == 0 {
-		panic("tags must not be empty")
-	}
-
 	matcher := language.NewMatcher(tags)
 
 	return func(next http.Handler) http.Handler {

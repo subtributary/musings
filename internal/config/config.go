@@ -14,17 +14,26 @@ type configFile struct {
 }
 
 func (cf *configFile) apply(c *Global) error {
-	c.Locales = make([]language.Tag, len(cf.Locales))
+	// We call a function with a more descriptive name for what we are doing.
+	// The caller wants to `apply` the config file to a config;
+	// but internally we want to `applyLocales` as the (only) step.
+	return cf.applyLocales(c)
+}
 
+func (cf *configFile) applyLocales(c *Global) error {
+	if len(cf.Locales) == 0 {
+		c.Locales = []language.Tag{language.Und}
+		return nil
+	}
+
+	c.Locales = make([]language.Tag, len(cf.Locales))
 	for i, locale := range cf.Locales {
 		tag, err := language.Parse(locale)
 		if err != nil {
-			return fmt.Errorf("parse locale %q", locale)
+			return fmt.Errorf("parse locale %q: %w", locale, err)
 		}
-
 		c.Locales[i] = tag
 	}
-
 	return nil
 }
 
@@ -36,12 +45,15 @@ type Global struct {
 
 // Load loads the global config from the default config file.
 func Load() (cfg Global, _ error) {
-	path := filepath.Join(DataPath, "config.json")
-	if data, err := os.ReadFile(path); err != nil {
+	data, err := os.ReadFile(filepath.Join(DataPath, "config.json"))
+	if err != nil {
 		return Global{}, fmt.Errorf("read config: %w", err)
-	} else if err = json.Unmarshal(data, &cfg); err != nil {
+	}
+
+	if err = json.Unmarshal(data, &cfg); err != nil {
 		return Global{}, fmt.Errorf("parse config: %w", err)
 	}
+
 	return cfg, nil
 }
 
