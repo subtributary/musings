@@ -1,10 +1,5 @@
 package templates
 
-import (
-	"fmt"
-	"os"
-)
-
 type LiveStore struct {
 	rootPath string
 }
@@ -13,17 +8,11 @@ func NewLiveStore(rootPath string) LiveStore {
 	return LiveStore{rootPath: rootPath}
 }
 
-func (s LiveStore) Lookup(name string) (Template, error) {
-	root, err := os.OpenRoot(s.rootPath)
-	if err != nil {
-		return Template{}, fmt.Errorf("open root: %w", err)
-	}
-	defer func() { _ = root.Close() }()
-
+func (s LiveStore) Lookup(name string) (tmpl Template, err error) {
 	store := NewCachedStore()
-	if err = store.LoadFS(root.FS()); err != nil {
-		return Template{}, fmt.Errorf("load store: %w", err)
+	err = store.Load(s.rootPath)
+	if err == nil {
+		tmpl, err = store.Lookup(name)
 	}
-
-	return store.Lookup(name)
+	return tmpl, err
 }

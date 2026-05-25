@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -14,10 +15,24 @@ type CachedStore struct {
 	modTime   time.Time
 }
 
-func NewCachedStore() CachedStore {
-	return CachedStore{
+func NewCachedStore() *CachedStore {
+	return &CachedStore{
 		templates: template.New(""),
 	}
+}
+
+func (s *CachedStore) Load(rootPath string) error {
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return fmt.Errorf("open root: %w", err)
+	}
+	defer func() { _ = root.Close() }()
+
+	if err = s.LoadFS(root.FS()); err != nil {
+		return fmt.Errorf("load templates: %w", err)
+	}
+
+	return nil
 }
 
 func (s *CachedStore) LoadFS(dir fs.FS) error {
