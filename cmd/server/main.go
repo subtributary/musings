@@ -83,8 +83,13 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 }
 
 func indexHandler(views *ViewFactory, cfg Config) http.HandlerFunc {
+	locales := cfg.Locales
+	if len(locales) == 0 {
+		locales = []language.Tag{language.Und}
+	}
+
 	indexes := make(map[language.Tag]posts.Index)
-	for _, tag := range cfg.Locales {
+	for _, tag := range locales {
 		locale := tag.String()
 		index, err := posts.LoadIndex(config.DataPath, locale)
 		if err != nil {
