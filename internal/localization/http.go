@@ -2,7 +2,7 @@ package localization
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/http"
 	"path"
 	"slices"
@@ -57,8 +57,9 @@ func LocalizedRoute(tags []language.Tag) func(next http.Handler) http.Handler {
 				// We do not have a localized path, so let's fix that.
 				lang := r.Header.Get("Accept-Language")
 				tag, _ = language.MatchStrings(matcher, lang)
-				redirectURL := fmt.Sprintf("/%s%s", tag, reqPath)
-				http.Redirect(w, r, redirectURL, http.StatusFound)
+				redirectURL := *r.URL
+				redirectURL.Path = "/" + tag.String() + reqPath
+				http.Redirect(w, r, redirectURL.String(), http.StatusFound)
 			}
 		})
 	}
@@ -72,6 +73,9 @@ func LocalizedRoute(tags []language.Tag) func(next http.Handler) http.Handler {
 func ParsePath(reqPath string) (language.Tag, string, error) {
 	reqPath = path.Clean(reqPath)
 	segments := strings.SplitN(reqPath, "/", 3)
+	if len(segments) < 2 {
+		return language.Und, "", errors.New("invalid path")
+	}
 
 	tag, err := language.Parse(segments[1])
 	if err != nil {

@@ -40,6 +40,12 @@ func TestLocalizeRoute(t *testing.T) {
 			reqPath:       "/index.html",
 			supportedTags: []language.Tag{language.Und},
 		},
+		{
+			name:          "redirect keeps query",
+			reqPath:       "/index?q=search",
+			supportedTags: []language.Tag{language.English},
+			newPath:       "/en/index?q=search",
+		},
 	}
 
 	for _, tt := range tests {
@@ -145,6 +151,11 @@ func TestParsePath(t *testing.T) {
 		trailing string
 		hasError bool
 	}{
+		{
+			name:     "empty path",
+			urlPath:  "",
+			hasError: true,
+		},
 		{
 			name:     "localized file path is processed",
 			urlPath:  "/en/index.html",
