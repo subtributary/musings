@@ -91,8 +91,7 @@ func indexHandler(views *ViewFactory, cfg Config) http.HandlerFunc {
 
 	indexes := make(map[language.Tag]posts.Index)
 	for _, tag := range locales {
-		locale := tag.String()
-		index, err := posts.LoadIndex(config.DataPath, locale)
+		index, err := posts.LoadIndex(config.DataPath, tag)
 		if err != nil {
 			log.Fatalf("could not load index: %v", err)
 		}

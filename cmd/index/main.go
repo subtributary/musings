@@ -1,95 +1,95 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 
+	"github.com/subtributary/musings/internal/config"
 	"github.com/subtributary/musings/internal/posts"
-)
-
-const (
-	ContentPath = "./content/"
-	DataPath    = "./data/"
+	"golang.org/x/text/language"
 )
 
 func main() {
-	var locale, target string
-	flag.StringVar(&locale, "locale", "", "")
-	flag.Usage = printUsage
-	flag.Parse()
-	if flag.NArg() > 1 {
-		printUsage()
-		os.Exit(1)
-	}
-	target = flag.Arg(0)
-
-	contentPath := filepath.Join(ContentPath, locale)
-	root, err := os.OpenRoot(contentPath)
+	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("Error opening root: %v", err)
+		log.Fatalf("Error loading config: %v", err)
 	}
-	defer func() { _ = root.Close() }()
 
-	var index posts.Index
-	if target == "" {
-		if index, err = posts.NewIndex(); err != nil {
-			log.Fatalf("Error creating index: %v", err)
-		}
-		if err = indexDir(index, root.FS()); err != nil {
-			log.Fatalf("Error indexing directory: %v", err)
-		}
-	} else {
-		if index, err = posts.LoadIndex(DataPath, locale); err != nil {
-			log.Fatalf("Error loading index: %v", err)
-		}
-		if err = indexFile(index, root.FS(), target); err != nil {
+	if cfg.TargetFile != "" && len(cfg.TargetLocales) == 1 {
+		if err := indexFile(cfg.TargetLocales[0], cfg.TargetFile); err != nil {
 			log.Fatalf("Error indexing file: %v", err)
 		}
-	}
-
-	if err = index.SaveIndex(DataPath, locale); err != nil {
-		log.Fatalf("Error saving index: %v", err)
+	} else if cfg.TargetFile != "" && len(cfg.TargetLocales) > 1 {
+		for _, locale := range cfg.TargetLocales {
+			if err := indexFile(locale, cfg.TargetFile); err != nil {
+				log.Printf("Error indexing file for locale %q: %v", locale, err)
+			}
+		}
+	} else if cfg.TargetFile == "" {
+		for _, locale := range cfg.TargetLocales {
+			if err := indexDir(locale); err != nil {
+				log.Printf("Error indexing locale %q: %v", locale, err)
+			}
+		}
 	}
 }
 
-func printUsage() {
-	program := filepath.Base(os.Args[0])
-	fmt.Println("Musings post indexer.")
-	fmt.Println()
-	fmt.Println("Usage:")
-	fmt.Printf("  %s [options]\n", program)
-	fmt.Printf("  %s [options] <file>\n", program)
-	fmt.Println()
-	fmt.Println("Options:")
-	fmt.Println("  --locale <tag>  Set the locale for the index. [default: none]")
-}
+func indexDir(locale language.Tag) error {
+	index, err := posts.NewIndex()
+	if err != nil {
+		return fmt.Errorf("new index: %w", err)
+	}
 
-func indexDir(index posts.Index, dir fs.FS) error {
-	return fs.WalkDir(dir, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+	contentRoot := os.DirFS(config.LocalizedContentPath(locale))
+	err = fs.WalkDir(contentRoot, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
 			return err
 		}
-		if info, err := d.Info(); err != nil {
-			return fmt.Errorf("file info: %v", err)
-		} else if !info.Mode().IsRegular() {
-			return nil
-		} else if filepath.Ext(path) != ".md" {
+		if !d.Type().IsRegular() || filepath.Ext(d.Name()) != ".md" {
 			return nil
 		}
-		return indexFile(index, dir, path)
+
+		post, err := posts.NewParser().ParseFile(contentRoot, path)
+		if err != nil {
+			return fmt.Errorf("parse %q: %w", path, err)
+		}
+
+		if err := index.Upsert(path, post); err != nil {
+			return fmt.Errorf("upsert %q: %w", path, err)
+		}
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	if err := index.SaveIndex(config.DataPath, locale); err != nil {
+		return fmt.Errorf("save index: %v", err)
+	}
+	return nil
 }
 
-func indexFile(index posts.Index, dir fs.FS, path string) error {
-	parser := posts.NewParser()
-	if post, err := parser.ParseFile(dir, path); err != nil {
-		return fmt.Errorf("parse post: %w", err)
-	} else if err = index.Upsert(path, post); err != nil {
+func indexFile(locale language.Tag, path string) error {
+	index, err := posts.LoadIndex(config.DataPath, locale)
+	if err != nil {
+		return fmt.Errorf("load index: %w", err)
+	}
+
+	contentRoot := os.DirFS(config.LocalizedContentPath(locale))
+	post, err := posts.NewParser().ParseFile(contentRoot, path)
+	if err != nil {
+		return fmt.Errorf("parse file: %w", err)
+	}
+
+	if err := index.Upsert(path, post); err != nil {
 		return fmt.Errorf("upsert: %w", err)
+	}
+
+	if err := index.SaveIndex(config.DataPath, locale); err != nil {
+		return fmt.Errorf("save index: %w", err)
 	}
 	return nil
 }
