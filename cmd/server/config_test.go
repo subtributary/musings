@@ -57,12 +57,13 @@ func TestLoadAppConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg, err := LoadAppConfig(tt.args, func(key string) string {
+			cfg := Config{}
+			err := cfg.loadAppConfig(tt.args, func(key string) string {
 				return tt.env[key]
 			})
 
 			if err != nil {
-				t.Fatalf("Expected no error, got: %v", err)
+				t.Fatalf("expected no error, got: %v", err)
 			}
 
 			if cfg.BindAddress != tt.want.BindAddress {

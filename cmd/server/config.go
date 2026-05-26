@@ -29,39 +29,40 @@ type Config struct {
 func LoadConfig() (Config, error) {
 	base, err := config.Load()
 	if err != nil {
-		return Config{}, err
+		return Config{}, fmt.Errorf("load global config: %w", err)
 	}
 
-	cfg, err := LoadAppConfig(os.Args[1:], os.Getenv)
-	if err != nil {
-		return Config{}, err
+	cfg := Config{Global: base}
+	if err := cfg.loadAppConfig(os.Args[1:], os.Getenv); err != nil {
+		return Config{}, fmt.Errorf("load app config: %w", err)
 	}
 
-	cfg.Global = base
-	return cfg, nil
+	return cfg, err
 }
 
-// LoadAppConfig loads the app-specific configuration from environment
+// loadAppConfig loads the app-specific configuration from environment
 // variables and command arguments. The arguments should not include the
 // leading executable name.
-func LoadAppConfig(args []string, getenv func(string) string) (cfg Config, err error) {
-	cfg.BindAddress = DefaultBindAddress
+func (c *Config) loadAppConfig(args []string, getenv func(string) string) error {
+	c.BindAddress = DefaultBindAddress
 
 	if v := getenv("MUSINGS_BIND"); v != "" {
-		cfg.BindAddress = v
+		c.BindAddress = v
 	}
 
 	fs := flag.NewFlagSet("server", flag.ContinueOnError)
-	fs.StringVar(&cfg.BindAddress, "bind", cfg.BindAddress, "")
-	fs.BoolVar(&cfg.LiveTemplates, "live-templates", false, "")
+	fs.StringVar(&c.BindAddress, "bind", c.BindAddress, "")
+	fs.BoolVar(&c.LiveTemplates, "live-templates", false, "")
 	fs.Usage = printUsage
 
-	err = fs.Parse(args)
-	if err == nil && fs.NArg() > 1 {
-		err = errors.New("unexpected positional argument")
+	err := fs.Parse(args)
+	if err != nil {
+		return fmt.Errorf("parse args: %v", err)
+	} else if fs.NArg() > 0 {
+		return errors.New("unexpected positional argument")
 	}
 
-	return
+	return nil
 }
 
 func printUsage() {
