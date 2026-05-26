@@ -2,6 +2,7 @@ package config
 
 import (
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/text/language"
 )
@@ -17,5 +18,6 @@ func LocalizedContentPath(locale language.Tag) string {
 	if locale == language.Und {
 		return ContentPath
 	}
-	return filepath.Join(ContentPath, locale.String())
+	localePath := strings.ToLower(locale.String())
+	return filepath.Join(ContentPath, localePath)
 }

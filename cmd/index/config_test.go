@@ -22,13 +22,13 @@ func TestLoadAppConfig(t *testing.T) {
 			name: "empty",
 			args: []string{},
 			base: config.Global{Locales: []language.Tag{language.Und}},
-			want: Config{Locales: []language.Tag{language.Und}},
+			want: Config{TargetLocales: []language.Tag{language.Und}},
 		},
 		{
 			name: "locale in global config",
 			args: []string{"--locale", "en"},
 			base: config.Global{Locales: []language.Tag{language.English}},
-			want: Config{Locales: []language.Tag{language.English}},
+			want: Config{TargetLocales: []language.Tag{language.English}},
 		},
 		{
 			name:    "locale not in global config",
@@ -37,12 +37,18 @@ func TestLoadAppConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "uppercase locale",
+			args: []string{"--locale", "EN"},
+			base: config.Global{Locales: []language.Tag{language.English}},
+			want: Config{TargetLocales: []language.Tag{language.English}},
+		},
+		{
 			name: "target without locale",
 			args: []string{"filename.md"},
 			base: config.Global{Locales: []language.Tag{language.English}},
 			want: Config{
-				Locales: []language.Tag{language.English},
-				Target:  "filename.md",
+				TargetLocales: []language.Tag{language.English},
+				TargetFile:    "filename.md",
 			},
 		},
 		{
@@ -52,8 +58,8 @@ func TestLoadAppConfig(t *testing.T) {
 				Locales: []language.Tag{language.English, language.Korean},
 			},
 			want: Config{
-				Locales: []language.Tag{language.Korean},
-				Target:  "filename.md",
+				TargetLocales: []language.Tag{language.Korean},
+				TargetFile:    "filename.md",
 			},
 		},
 		{
@@ -65,6 +71,8 @@ func TestLoadAppConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			cfg := Config{Global: tt.base}
 			err := cfg.loadAppConfig(tt.args)
 
@@ -76,12 +84,12 @@ func TestLoadAppConfig(t *testing.T) {
 				return
 			}
 
-			if !slices.Equal(cfg.Locales, tt.want.Locales) {
-				t.Errorf("Locales = %v, want %v", cfg.Locales, tt.want.Locales)
+			if !slices.Equal(cfg.TargetLocales, tt.want.TargetLocales) {
+				t.Errorf("Locales = %v, want %v", cfg.TargetLocales, tt.want.TargetLocales)
 			}
 
-			if cfg.Target != tt.want.Target {
-				t.Errorf("Target = %v, want %v", cfg.Target, tt.want.Target)
+			if cfg.TargetFile != tt.want.TargetFile {
+				t.Errorf("Target = %v, want %v", cfg.TargetFile, tt.want.TargetFile)
 			}
 		})
 	}

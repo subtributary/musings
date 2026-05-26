@@ -29,11 +29,11 @@ func LoadIndex(dataPath string, locale language.Tag) (Index, error) {
 
 	content, err := os.ReadFile(databasePath(dataPath, locale))
 	if err != nil {
-		return index, fmt.Errorf("read index file: %v", err)
+		return index, fmt.Errorf("read index file: %w", err)
 	}
 
 	if err := json.Unmarshal(content, index.wrapped); err != nil {
-		return index, fmt.Errorf("unmarshal index: %v", err)
+		return index, fmt.Errorf("unmarshal index: %w", err)
 	}
 
 	return index, nil
@@ -42,12 +42,12 @@ func LoadIndex(dataPath string, locale language.Tag) (Index, error) {
 func (idx Index) SaveIndex(dataPath string, locale language.Tag) error {
 	content, err := json.Marshal(idx.wrapped)
 	if err != nil {
-		return fmt.Errorf("marshal index: %v", err)
+		return fmt.Errorf("marshal index: %w", err)
 	}
 
 	filePath := databasePath(dataPath, locale)
-	if err := os.WriteFile(filePath, content, os.ModePerm); err != nil {
-		return fmt.Errorf("write file: %v", err)
+	if err := os.WriteFile(filePath, content, 0o644); err != nil {
+		return fmt.Errorf("write file: %w", err)
 	}
 
 	return nil
@@ -73,7 +73,7 @@ func (idx Index) Search(query string) iter.Seq[SearchResult] {
 
 func (idx Index) Upsert(path string, post ParsedPost) error {
 	id := post.Published.Format("20060102T150405") + path
-	path = strings.TrimRight(path, ".md")
+	path = strings.TrimSuffix(path, ".md")
 	return idx.wrapped.Upsert(id, map[string]string{
 		"title":     post.Title,
 		"content":   string(post.Content),

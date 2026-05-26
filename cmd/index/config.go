@@ -15,8 +15,8 @@ import (
 type Config struct {
 	config.Global
 
-	Locales []language.Tag
-	Target  string
+	TargetLocales []language.Tag
+	TargetFile    string
 }
 
 func LoadConfig() (Config, error) {
@@ -30,7 +30,7 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("load app config: %w", err)
 	}
 
-	return cfg, err
+	return cfg, nil
 }
 
 func (c *Config) LocalizedContentPath(locale language.Tag) string {
@@ -46,7 +46,7 @@ func (c *Config) loadAppConfig(args []string) error {
 	fs.Usage = printUsage
 
 	if err := fs.Parse(args); err != nil {
-		return fmt.Errorf("parse args: %v", err)
+		return fmt.Errorf("parse args: %w", err)
 	}
 	if fs.NArg() > 1 {
 		return errors.New("too many arguments")
@@ -55,17 +55,17 @@ func (c *Config) loadAppConfig(args []string) error {
 	// If locale is not set, default to all locales.
 	// If locale is set, validate it then use it as the single locale.
 	if *localePtr == "" {
-		c.Locales = c.Global.Locales
+		c.TargetLocales = c.Global.Locales
 	} else if tag, err := language.Parse(*localePtr); err != nil {
-		return fmt.Errorf("parse locale: %v", err)
+		return fmt.Errorf("parse locale: %w", err)
 	} else if !slices.Contains(c.Global.Locales, tag) {
 		return errors.New("locale is not enabled")
 	} else {
-		c.Locales = []language.Tag{tag}
+		c.TargetLocales = []language.Tag{tag}
 	}
 
-	c.Target = fs.Arg(0)
-	if c.Target != "" && filepath.Ext(c.Target) != ".md" {
+	c.TargetFile = fs.Arg(0)
+	if c.TargetFile != "" && filepath.Ext(c.TargetFile) != ".md" {
 		return errors.New("target is not markdown")
 	}
 

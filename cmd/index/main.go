@@ -18,18 +18,18 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	if cfg.Target != "" && len(cfg.Locales) == 1 {
-		if err := indexFile(cfg.Locales[0], cfg.Target); err != nil {
+	if cfg.TargetFile != "" && len(cfg.TargetLocales) == 1 {
+		if err := indexFile(cfg.TargetLocales[0], cfg.TargetFile); err != nil {
 			log.Fatalf("Error indexing file: %v", err)
 		}
-	} else if cfg.Target != "" && len(cfg.Locales) > 1 {
-		for _, locale := range cfg.Locales {
-			if err := indexFile(locale, cfg.Target); err != nil {
+	} else if cfg.TargetFile != "" && len(cfg.TargetLocales) > 1 {
+		for _, locale := range cfg.TargetLocales {
+			if err := indexFile(locale, cfg.TargetFile); err != nil {
 				log.Printf("Error indexing file for locale %q: %v", locale, err)
 			}
 		}
-	} else if cfg.Target == "" {
-		for _, locale := range cfg.Locales {
+	} else if cfg.TargetFile == "" {
+		for _, locale := range cfg.TargetLocales {
 			if err := indexDir(locale); err != nil {
 				log.Printf("Error indexing locale %q: %v", locale, err)
 			}
@@ -40,7 +40,7 @@ func main() {
 func indexDir(locale language.Tag) error {
 	index, err := posts.NewIndex()
 	if err != nil {
-		return fmt.Errorf("new index: %v", err)
+		return fmt.Errorf("new index: %w", err)
 	}
 
 	contentRoot := os.DirFS(config.LocalizedContentPath(locale))
@@ -54,11 +54,11 @@ func indexDir(locale language.Tag) error {
 
 		post, err := posts.NewParser().ParseFile(contentRoot, path)
 		if err != nil {
-			return fmt.Errorf("parse %q: %v", path, err)
+			return fmt.Errorf("parse %q: %w", path, err)
 		}
 
 		if err := index.Upsert(path, post); err != nil {
-			return fmt.Errorf("upsert %q: %v", path, err)
+			return fmt.Errorf("upsert %q: %w", path, err)
 		}
 		return nil
 	})
@@ -75,21 +75,21 @@ func indexDir(locale language.Tag) error {
 func indexFile(locale language.Tag, path string) error {
 	index, err := posts.LoadIndex(config.DataPath, locale)
 	if err != nil {
-		return fmt.Errorf("load index: %v", err)
+		return fmt.Errorf("load index: %w", err)
 	}
 
 	contentRoot := os.DirFS(config.LocalizedContentPath(locale))
 	post, err := posts.NewParser().ParseFile(contentRoot, path)
 	if err != nil {
-		return fmt.Errorf("parse file: %v", err)
+		return fmt.Errorf("parse file: %w", err)
 	}
 
 	if err := index.Upsert(path, post); err != nil {
-		return fmt.Errorf("upsert: %v", err)
+		return fmt.Errorf("upsert: %w", err)
 	}
 
 	if err := index.SaveIndex(config.DataPath, locale); err != nil {
-		return fmt.Errorf("save index: %v", err)
+		return fmt.Errorf("save index: %w", err)
 	}
 	return nil
 }

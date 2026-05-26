@@ -30,7 +30,7 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("load app config: %w", err)
 	}
 
-	return cfg, err
+	return cfg, nil
 }
 
 func (c *Config) loadAppConfig(args []string) error {
