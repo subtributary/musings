@@ -22,7 +22,6 @@ func main() {
 		log.Fatalf("Error loading config: %v", err)
 	}
 
-	localization.InitTranslations()
 	views, err := LoadViewFactory(cfg)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
@@ -54,7 +53,7 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := currentRoutePath(r) + ".md"
+		path := r.URL.Path + ".md"
 
 		info, err := fs.Stat(root.FS(), path)
 		if errors.Is(err, fs.ErrNotExist) {

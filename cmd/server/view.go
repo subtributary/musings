@@ -36,8 +36,9 @@ func WithDataModified(when time.Time) ViewOption {
 }
 
 type ViewFactory struct {
-	locales []language.Tag
-	store   templates.Store
+	locales       []language.Tag
+	templateStore templates.Store
+	translations  localization.Store
 }
 
 func LoadViewFactory(cfg Config) (*ViewFactory, error) {
@@ -45,11 +46,17 @@ func LoadViewFactory(cfg Config) (*ViewFactory, error) {
 		locales: cfg.Locales,
 	}
 
-	store, err := templates.NewStore(config.TemplatesPath, cfg.LiveTemplates)
+	templateStore, err := templates.NewStore(config.TemplatesPath, cfg.LiveTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("load templates: %v", err)
 	}
-	f.store = store
+	f.templateStore = templateStore
+
+	translations, err := localization.LoadStore(config.DataPath)
+	if err != nil {
+		return nil, fmt.Errorf("load translations: %v", err)
+	}
+	f.translations = translations
 
 	return f, nil
 }
@@ -87,36 +94,36 @@ func (f *ViewFactory) Serve(w http.ResponseWriter, r *http.Request, name string,
 }
 
 func (f *ViewFactory) setLanguage(v *View, current language.Tag, path string) {
-	v.model.LanguageOptions = make([]LanguageOption, 0, len(f.locales))
-	v.model.Language = LanguageOption{IsCurrent: true, URL: "/"}
+	v.model.LocaleOptions = make([]LocaleOption, 0, len(f.locales))
+	v.model.Locale = LocaleOption{IsCurrent: true, URL: "/"}
 
 	for _, tag := range f.locales {
 		code := tag.String()
 		localizedPath, _ := url.JoinPath("/", code, path)
-		option := LanguageOption{
+		option := LocaleOption{
 			Code:      code,
 			Label:     display.Self.Name(tag),
 			IsCurrent: tag == current,
 			URL:       localizedPath,
 		}
 
-		v.model.LanguageOptions = append(v.model.LanguageOptions, option)
+		v.model.LocaleOptions = append(v.model.LocaleOptions, option)
 		if option.IsCurrent {
-			v.model.Language = option
+			v.model.Locale = option
 		}
 	}
 }
 
 func (f *ViewFactory) setTemplate(v *View, name string) (err error) {
-	v.tmpl, err = f.store.Lookup(name)
+	v.tmpl, err = f.templateStore.Lookup(name)
 	return
 }
 
-func (f *ViewFactory) setTranslations(v *View, language language.Tag) {
-	v.model.Translations = localization.LoadFor(language)
+func (f *ViewFactory) setTranslations(v *View, locale language.Tag) {
+	v.model.Translations = f.translations.For(locale)
 }
 
-type LanguageOption struct {
+type LocaleOption struct {
 	Code      string
 	Label     string
 	IsCurrent bool
@@ -124,10 +131,10 @@ type LanguageOption struct {
 }
 
 type ViewModel struct {
-	LanguageOptions []LanguageOption
-	Language        LanguageOption
-	Translations    localization.Strings
-	Data            any
+	LocaleOptions []LocaleOption
+	Locale        LocaleOption
+	Translations  localization.Translations
+	Data          any
 }
 
 type View struct {

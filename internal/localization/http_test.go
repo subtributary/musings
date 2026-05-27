@@ -82,6 +82,12 @@ func TestLocalizedRouteAcceptLanguage(t *testing.T) {
 		expectedLocale   language.Tag
 	}{
 		{
+			name:             "invalid locale defaults to first",
+			acceptLanguage:   "xx",
+			supportedLocales: []language.Tag{language.English, language.Korean},
+			expectedLocale:   language.English,
+		},
+		{
 			name:             "match parent locale when user accepts child locale",
 			acceptLanguage:   "zh-Hans",
 			supportedLocales: []language.Tag{language.Chinese},
@@ -130,10 +136,7 @@ func TestLocalizedRouteAcceptLanguage(t *testing.T) {
 				t.Fatalf("empty Location header")
 			}
 
-			tag, _, err := ParsePath(loc)
-			if err != nil {
-				t.Fatalf("parse location %q: %v", loc, err)
-			}
+			tag, _ := ParsePath(loc)
 			if tag != tt.expectedLocale {
 				t.Errorf("locale: got %v, want %v", tag, tt.expectedLocale)
 			}
@@ -149,40 +152,60 @@ func TestParsePath(t *testing.T) {
 		urlPath  string
 		tag      language.Tag
 		trailing string
-		hasError bool
 	}{
 		{
 			name:     "empty path",
 			urlPath:  "",
-			hasError: true,
+			tag:      language.Und,
+			trailing: "/",
 		},
 		{
-			name:     "localized file path is processed",
-			urlPath:  "/en/index.html",
-			tag:      language.English,
-			trailing: "/index.html",
+			name:     "root path",
+			urlPath:  "/",
+			tag:      language.Und,
+			trailing: "/",
 		},
 		{
-			name:     "localized root path is processed",
+			name:     "localized root path",
 			urlPath:  "/en/",
 			tag:      language.English,
 			trailing: "/",
 		},
 		{
-			name:     "localized root path without trailing slash is processed",
+			name:     "localized root path without trailing slash",
 			urlPath:  "/en",
 			tag:      language.English,
 			trailing: "/",
 		},
 		{
-			name:     "invalid locale is an error",
-			urlPath:  "/xx/index.html",
-			hasError: true,
+			name:     "localized root path without leading slash",
+			urlPath:  "en/",
+			tag:      language.English,
+			trailing: "/",
 		},
 		{
-			name:     "root path is an error",
-			urlPath:  "/",
-			hasError: true,
+			name:     "localized root path without slashes",
+			urlPath:  "en",
+			tag:      language.English,
+			trailing: "/",
+		},
+		{
+			name:     "localized file path",
+			urlPath:  "/en/index.html",
+			tag:      language.English,
+			trailing: "/index.html",
+		},
+		{
+			name:     "localized nested file path",
+			urlPath:  "/en/sub/index.html",
+			tag:      language.English,
+			trailing: "/sub/index.html",
+		},
+		{
+			name:     "invalid locale",
+			urlPath:  "/xx/index.html",
+			tag:      language.Und,
+			trailing: "/xx/index.html",
 		},
 	}
 
@@ -191,20 +214,14 @@ func TestParsePath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tag, trailing, err := ParsePath(tt.urlPath)
-
-			if tt.hasError && err == nil {
-				t.Fatalf("ParsePath(%s): expected error but got none", tt.urlPath)
-			} else if !tt.hasError && err != nil {
-				t.Fatalf("ParsePath(%s): expected no error but got one: %v", tt.urlPath, err)
-			}
+			tag, trailing := ParsePath(tt.urlPath)
 
 			if tt.tag != tag {
-				t.Errorf("ParsePath(%s): expected tag %v but got %v", tt.urlPath, tt.tag, tag)
+				t.Errorf("ParsePath(%q): tag = %v, want %v", tt.urlPath, tag, tt.tag)
 			}
 
 			if tt.trailing != trailing {
-				t.Errorf("ParsePath(%s): expected trailing %v but got %v", tt.urlPath, tt.tag, tag)
+				t.Errorf("ParsePath(%q): trailing = %v, want %v", tt.urlPath, trailing, tt.trailing)
 			}
 		})
 	}
