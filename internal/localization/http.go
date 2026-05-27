@@ -17,7 +17,8 @@ func LocaleFromContext(ctx context.Context) language.Tag {
 	if value, ok := ctx.Value(localeKey{}).(language.Tag); ok {
 		return value
 	}
-	panic("context is not set; LocalizedRoute middleware needs to be used")
+	log.Printf("Localization context is not set; LocalizedRoute middleware needs to be used.")
+	return language.Und
 }
 
 func withLocale(ctx context.Context, tag language.Tag) context.Context {
@@ -41,14 +42,13 @@ func LocalizedRoute(tags []language.Tag) func(next http.Handler) http.Handler {
 			reqPath := r.URL.Path
 
 			if !strings.HasPrefix(reqPath, "/") {
-				log.Printf("expected slash prefix on path, got %q", reqPath)
+				log.Printf("Expected slash prefix on path, got %q", reqPath)
 				reqPath = "/" + reqPath
 			}
 
 			// Reserved and system paths are not localized.
 			if strings.HasPrefix(reqPath, "/_") {
 				r = r.WithContext(withLocale(r.Context(), language.Und))
-				chiContext.RoutePath = reqPath
 				next.ServeHTTP(w, r)
 				return
 			}

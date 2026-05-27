@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -53,7 +54,7 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path + ".md"
+		path := strings.TrimLeft(r.URL.Path, "/") + ".md"
 
 		info, err := fs.Stat(root.FS(), path)
 		if errors.Is(err, fs.ErrNotExist) {
