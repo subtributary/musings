@@ -93,7 +93,6 @@ func parsePostTime(value string) *time.Time {
 type postFrontmatter struct {
 	Bylines   []string
 	Published string
-	Tags      []string
 }
 
 func parseFrontmatter(context parser.Context) (result postFrontmatter, err error) {

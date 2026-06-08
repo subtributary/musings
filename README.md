@@ -1,71 +1,65 @@
 # Musings
-Musings is a simple, low-maintenance, self-hostable publishing CMS for blog/news-style sites with first-class localization and a lightweight plugin mechanism.
+Musings is a publishing CMS focused on text-heavy content like blogs, stories, and news articles.
+It features first-class localization, markdown content, and a lightweight plugin mechanism.
 
-> [!NOTE]
-> Musing is still in version 0.*, so many of these features may not yet exist.
+For detailed documentation, see the "docs" directory.
 
-## Folder Structure
+## Building from source
 
-...
-
-## Initial Setup
-
-Musings stores its content in a separate Git repository. This could be configured manually, but it's easiest to use our included script:
+The backend is compiled via `go`:
 
 ```shell
-source .env && scripts/init-content.sh
+go build -o bin/server ./cmd/server
 ```
 
-The script will also set the environment variable `CONTENT_REPO_DIR` in the ".env" file. Verify that all the settings therein are as you want them:
+The frontend is compiled via `npm`:
 
 ```shell
-cat .env
+npm install # needed on first build
+npm run build
 ```
 
-Sensible defaults are preset, so it is unlikely that they will need changed for development work.
+All the above commands should be run from the repository root. (e.g. ~/dev/musings)
 
-## Building Binaries
 
-The backend is written in Go. The frontend is written in CSS, JavaScript, React, SCSS, and TypeScript. For building, just use our script:
+## Running the server
 
-```shell
-./scripts/build.sh {projects}
+After building Musings, run it directly:
+
+```
+bin/server
 ```
 
-For the `projects` parameter, specify one or more of "admin", "api", or "web", or specify "all" for all three. The output will be in "./bin".
+During frontend customization, add the `--live-templates` flag for convenience.
+
+By default, Musings listens at ":8080".  This can be changed via the `--bind` parameter or the `MUSINGS_BIND` environment variable.
+
 
 ## Customizing
 
-To avoid breaking changes, limit customizations to the "custom" folder and use the sdk in "./pkg/sdk".
+The frontend of Musings is designed to be customized.
+To avoid breaking changes, limit customizations to the "web" directory.
+
+* `web/src/scss/` - Styles, transpiled to `web/static/css/` and served at the URL `/_static/css/`.
+* `web/src/ts/` - Scripts, transpiled to `web/static/js/` and served at the URL `/_static/js/`.
+* `web/static/media/` - Images and other media, served at the URL `/_static/media/`.
+* `templates/partials/` - HTML templates used by other templates.
+* `templates/index.gohtml` - HTML template used to render the index.
+* `templates/post.gohtml` - HTML template used to render a post.
+
+For more information on customizing Musings, see [docs/customizing.md].
 
 ## Deploying
 
-The binaries and their dependencies are spread across directories, so run this script to consolidate them into "./publish":
+Most of the files in the repository are not needed to run Musings.
+The files and directories that are needed are:
 
-```shell
-./scripts.publish.sh
-```
+* bin/server
+* content/
+* data/
+* web/static/
+* web/templates/
 
-This will build all projects, then copy them and their dependencies into "./publish" with this directory structure:
+When updating an existing installation, omit the "content" directory to avoid overwriting user content, and review the files in the "data" directory to ensure they match the desired user configuration.
 
- - admin/
-   - bin/
-   - public/
-   - config.json
-   - .env
- - api/
-   - bin/
-   - config.json
-   - .env
- - web/
-   - bin/
-   - public/
-   - config.json
-   - .env
-
-These can be hosted on subdomains (recommended) or on the same domain. If hosting on the same domain, "~/_admin" and "~/_api" are the recommended paths for `admin` and `api`, respectfully.
-
-> [!WARNING]
-> Hosting `admin` and `web` on the same host will allow them to share cookies, which is risky.
-
-By default, plugins are disabled to reduce XSS risks. Please do not enable them if hosting everything on the same domain. If you do want to enable them, edit the plugin whitelist in "config.json", and run the website with the `--enable-plugins` parameter.
+For more information on deploying Musings, see [docs/deploying.md].

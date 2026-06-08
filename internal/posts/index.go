@@ -32,6 +32,7 @@ type IndexedPost struct {
 	Published *time.Time
 	Title     string
 }
+
 type Index struct {
 	ranker    *bm25f.BM25F
 	corpus    *bm25f.Corpus
