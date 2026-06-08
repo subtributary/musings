@@ -33,6 +33,10 @@ type IndexedPost struct {
 	Title     string
 }
 
+func (p IndexedPost) isPublished(now time.Time) bool {
+	return p.Published == nil || !p.Published.After(now)
+}
+
 type Index struct {
 	ranker    *bm25f.BM25F
 	corpus    *bm25f.Corpus
@@ -92,6 +96,7 @@ func BuildIndex(ctx context.Context, contentRoot fs.FS) (*Index, error) {
 }
 
 // List lists all posts in order of publication with the most recent one first.
+// Posts with publication dates in the future are omitted.
 func (s *Index) List() iter.Seq[IndexedPost] {
 	var results []IndexedPost
 	for _, doc := range s.corpus.Documents() {
@@ -99,7 +104,9 @@ func (s *Index) List() iter.Seq[IndexedPost] {
 	}
 
 	slices.SortFunc(results, func(a, b IndexedPost) int {
-		if c := compareDates(b.Published, a.Published); c != 0 {
+		// compareTimes parameters are reversed to sort descending.
+		// This also causes nil times to be sorted before non-nil times.
+		if c := compareTimes(b.Published, a.Published); c != 0 {
 			return c
 		}
 		if c := cmp.Compare(a.Title, b.Title); c != 0 {
@@ -108,8 +115,13 @@ func (s *Index) List() iter.Seq[IndexedPost] {
 		return cmp.Compare(a.Path, b.Path)
 	})
 
+	now := time.Now()
+
 	return func(yield func(p IndexedPost) bool) {
 		for _, post := range results {
+			if !post.isPublished(now) {
+				continue
+			}
 			if !yield(post) {
 				return
 			}
@@ -119,6 +131,7 @@ func (s *Index) List() iter.Seq[IndexedPost] {
 
 // Search returns the posts matching the query,
 // sorted by match score with the best match first.
+// Posts with publication dates in the future are omitted.
 func (s *Index) Search(query string) iter.Seq[IndexedPost] {
 	if strings.TrimSpace(query) == "" {
 		return s.List()
@@ -138,9 +151,15 @@ func (s *Index) Search(query string) iter.Seq[IndexedPost] {
 		return cmp.Compare(a.ID, b.ID)
 	})
 
+	now := time.Now()
+
 	return func(yield func(p IndexedPost) bool) {
 		for _, result := range scores {
-			if !yield(docToPost(result.Document)) {
+			post := docToPost(result.Document)
+			if !post.isPublished(now) {
+				continue
+			}
+			if !yield(post) {
 				return
 			}
 		}
@@ -174,7 +193,6 @@ func (s *Index) upsert(path string, post ParsedPost) {
 // Missing or malformed metadata is degrated to zero values.
 func docToPost(doc *bm25f.Document) (p IndexedPost) {
 	p.Title, _ = doc.Metadata(metadataTitle)
-
 	p.Path, _ = doc.Metadata(metadataPath)
 
 	publishedStr, _ := doc.Metadata(metadataPublished)
@@ -188,7 +206,9 @@ func docToPost(doc *bm25f.Document) (p IndexedPost) {
 	return p
 }
 
-func compareDates(a *time.Time, b *time.Time) int {
+// compareTimes is like time.Time.Compare but handles nil times.
+// Nil times are treated as occurring after non-Nil times.
+func compareTimes(a *time.Time, b *time.Time) int {
 	switch {
 	case a == nil && b == nil:
 		return 0
