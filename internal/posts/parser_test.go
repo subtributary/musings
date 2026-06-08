@@ -14,6 +14,7 @@ func TestParseContent(t *testing.T) {
 		name    string
 		content string
 		want    ParsedPost
+		wantErr bool
 	}{
 		{
 			name:    "empty",
@@ -23,14 +24,12 @@ func TestParseContent(t *testing.T) {
 		{
 			name: "full frontmatter",
 			content: "---\n" +
-				"bylines: by Nathan Belue\n" +
+				"bylines: [by Nathan Belue]\n" +
 				"published: 2026-04-30\n" +
-				"tags: [apple, banana]\n" +
 				"---\n",
 			want: ParsedPost{
 				Bylines:   []string{"by Nathan Belue"},
 				Published: parseTime(time.DateOnly, "2026-04-30"),
-				Tags:      []string{"apple", "banana"},
 			},
 		},
 		{
@@ -41,7 +40,8 @@ func TestParseContent(t *testing.T) {
 		},
 		{
 			name:    "invalid frontmatter",
-			content: "--\ntags: [apple\n---",
+			content: "---\ntags: [apple\n---",
+			wantErr: true,
 		},
 		{
 			name:    "move heading to title",
@@ -76,6 +76,9 @@ func TestParseContent(t *testing.T) {
 			parser := NewParser()
 			post, err := parser.ParseContent([]byte(tt.content))
 			if err != nil {
+				if tt.wantErr {
+					return
+				}
 				t.Fatalf("failed to parse content: %v", err)
 			}
 
@@ -85,16 +88,18 @@ func TestParseContent(t *testing.T) {
 				t.Errorf("post.Content: got %v, want %v", post.Content, tt.want.Content)
 			}
 
-			// Metadata
 			if !slices.Equal(post.Bylines, tt.want.Bylines) {
 				t.Errorf("post.Bylines: got %v, want %v", post.Bylines, tt.want.Bylines)
 			}
-			if post.Published != tt.want.Published {
-				t.Errorf("post.Published: got %v, want %v", post.Published, tt.want.Published)
+
+			if post.Published == nil || tt.want.Published == nil {
+				if post.Published != tt.want.Published {
+					t.Errorf("post.Published = %v, want %v", post.Published, tt.want.Published)
+				}
+			} else if !post.Published.Equal(*tt.want.Published) {
+				t.Errorf("post.Published = %v, want %v", post.Published, tt.want.Published)
 			}
-			if !slices.Equal(post.Tags, tt.want.Tags) {
-				t.Errorf("post.Tags: got %v, want %v", post.Tags, tt.want.Tags)
-			}
+
 			if post.Title != tt.want.Title {
 				t.Errorf("post.Title: got %v, want %v", post.Title, tt.want.Title)
 			}

@@ -21,7 +21,6 @@ type ParsedPost struct {
 	Content   template.HTML
 	Bylines   []string
 	Published *time.Time
-	Tags      []string
 }
 
 type Parser struct {
@@ -72,12 +71,12 @@ func (s Parser) ParseContent(content []byte) (ParsedPost, error) {
 		Title:     getTitle(context),
 		Content:   template.HTML(parsedContent),
 		Bylines:   fm.Bylines,
-		Tags:      fm.Tags,
 		Published: parsePostTime(fm.Published),
 	}, nil
 }
 
-// parsePostTime parses a time string if it matches one of our supported formats.
+// parsePostTime parses a time string in RFC3339 or a supported format.
+// If the string cannot be parsed, nil is returned.
 func parsePostTime(value string) *time.Time {
 	if t, err := time.Parse(time.RFC3339, value); err == nil {
 		return &t
@@ -126,7 +125,7 @@ func (t *removeH1Transformer) Transform(doc *ast.Document, reader text.Reader, p
 			return ast.WalkContinue, nil
 		}
 
-		// Only use top-level H1 as post title
+		// Only use top-level H1 as title
 		if heading.Parent() != doc {
 			return ast.WalkContinue, nil
 		}
