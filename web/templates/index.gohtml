@@ -3,14 +3,25 @@
 {{template "partials/head"}}
 <body>
 {{template "partials/header" .}}
+
 <main>
     {{range .Data}}
-        <a href="{{.Path}}">
-            <section>
-                <h2>{{.Title}}</h2>
-            </section>
-        </a>
+        <article>
+            <header>
+                <div class="title">{{.Title}}</div>
+                <div class="metadata">
+                    {{if ne .Published nil}}
+                        {{.Published.Format "2006-01-02"}}
+                    {{end}}
+                </div>
+            </header>
+            Summary will go here.
+            <footer>
+                <a href="{{.Path}}">Continue reading...</a>
+            </footer>
+        </article>
     {{end}}
 </main>
+
 </body>
 </html>

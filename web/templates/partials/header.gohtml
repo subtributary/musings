@@ -1,23 +1,22 @@
-<header>
-    <nav>
-        <ul>
-            <li>
-                <a href="/">
-                    <img src="/_static/media/logo.svg" alt="{{.Translations.Get "Website logo"}}" style="height: 1em; width: 1em;">
-                    Musings
-                </a>
-            </li>
-        </ul>
-        <div>
+<header id="main-header">
+    <nav id="main-nav">
+        <a class="brand" href="/">
+            <img src="/_static/media/logo.svg"
+                 alt="{{.Translations.Get "Website logo"}}"
+                 style="height: 52px; width: 52px; margin-right: 0.5em;"
+            >
+            <span class="brand-name">Musings</span>
+        </a>
+
+        <div class="search">
             <form action="/" method="get">
                 <label class="sr-only" for="search">Search</label>
                 <input id="search" name="q" type="search">
             </form>
         </div>
-        <ul>
-            <li>
-                {{template "partials/locales" .}}
-            </li>
-        </ul>
+
+        <div class="locale-switcher">
+            {{template "partials/locales" .}}
+        </div>
     </nav>
 </header>

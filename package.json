@@ -5,6 +5,7 @@
   "description": "Build pipeline for SCSS (and optional JS/TS later)",
   "scripts": {
     "build:css": "sass --load-path=node_modules web/src/scss:web/static/css --no-source-map",
+    "build:watch": "sass --watch --load-path=node_modules web/src/scss:web/static/css --no-source-map",
     "build": "npm run build:css"
   },
   "devDependencies": {

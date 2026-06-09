@@ -1,11 +1,11 @@
 {{if and (eq (len .LocaleOptions) 1) (eq .Locale.Code "und")}}
     <!-- No languages are configured. -->
 {{else}}
-    <details class="dropdown locale-picker">
+    <details class="dropdown">
         <summary>
             <span aria-label="{{.Translations.Get "Select Langauge"}}" aria-hidden="true">文Ａ &ndash; {{.Locale.Label}}</span>
         </summary>
-        <ul>
+        <ul dir="rtl">
             {{range .LocaleOptions}}
                 <li>
                     {{if .IsCurrent}}
