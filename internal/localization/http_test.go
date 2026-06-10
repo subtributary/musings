@@ -1,4 +1,4 @@
-package localization
+package localization_test
 
 import (
 	"net/http"
@@ -6,45 +6,59 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
-	"golang.org/x/text/language"
+	"github.com/subtributary/musings/internal/localization"
 )
 
 func TestLocalizeRoute(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		reqPath       string
-		supportedTags []language.Tag
-		newPath       string
+		name    string
+		reqPath string
+		locales []localization.Locale
+		newPath string
 	}{
 		{
-			name:          "redirect if no path locale",
-			reqPath:       "/index.html",
-			supportedTags: []language.Tag{language.English},
-			newPath:       "/en/index.html",
+			name:    "redirect if no path locale",
+			reqPath: "/index.html",
+			locales: []localization.Locale{en},
+			newPath: "/en/index.html",
 		},
 		{
-			name:          "redirect if unsupported path locale",
-			reqPath:       "/ko/index.html",
-			supportedTags: []language.Tag{language.English},
-			newPath:       "/en/ko/index.html",
+			name:    "redirect if unsupported path locale",
+			reqPath: "/ko/index.html",
+			locales: []localization.Locale{en},
+			newPath: "/en/ko/index.html",
 		},
 		{
-			name:          "no redirect if supported path locale",
-			reqPath:       "/en/index.html",
-			supportedTags: []language.Tag{language.English},
+			name:    "no redirect if supported path locale",
+			reqPath: "/en/index.html",
+			locales: []localization.Locale{en},
 		},
 		{
-			name:          "no redirect if undefined locale is supported",
-			reqPath:       "/index.html",
-			supportedTags: []language.Tag{language.Und},
+			name:    "no redirect if no locales",
+			reqPath: "/index.html",
+			locales: []localization.Locale{},
 		},
 		{
-			name:          "redirect keeps query",
-			reqPath:       "/index?q=search",
-			supportedTags: []language.Tag{language.English},
-			newPath:       "/en/index?q=search",
+			name:    "redirect keeps query",
+			reqPath: "/index?q=search",
+			locales: []localization.Locale{en},
+			newPath: "/en/index?q=search",
+		},
+		{
+			name:    "lowercase locale when redirected",
+			reqPath: "/index.html",
+			locales: []localization.Locale{zhHans},
+			newPath: "/zh-hans/index.html",
+		},
+		{
+			// This test fails. I will leave it for now.
+			// I might want to lowercase in other middleware.
+			name:    "redirect to lowercase locale if uppercase",
+			reqPath: "/zh-Hans/index.html",
+			locales: []localization.Locale{zhHans},
+			newPath: "/zh-hans/index.html",
 		},
 	}
 
@@ -54,7 +68,7 @@ func TestLocalizeRoute(t *testing.T) {
 			t.Parallel()
 
 			r := chi.NewRouter()
-			r.Use(LocalizedRoute(tt.supportedTags))
+			r.Use(localization.LocalizedRoute(tt.locales))
 			r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {})
 
 			req := httptest.NewRequest("GET", tt.reqPath, nil)
@@ -76,54 +90,67 @@ func TestLocalizedRouteAcceptLanguage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name             string
-		acceptLanguage   string
-		supportedLocales []language.Tag
-		expectedLocale   language.Tag
+		name           string
+		acceptLanguage string
+		supported      []localization.Locale
+		expected       localization.Locale
 	}{
 		{
-			name:             "invalid locale defaults to first",
-			acceptLanguage:   "xx",
-			supportedLocales: []language.Tag{language.English, language.Korean},
-			expectedLocale:   language.English,
+			name:           "invalid locale defaults to first",
+			acceptLanguage: "xx",
+			supported:      []localization.Locale{en, ar},
+			expected:       en,
 		},
 		{
-			name:             "match parent locale when user accepts child locale",
-			acceptLanguage:   "zh-Hans",
-			supportedLocales: []language.Tag{language.Chinese},
-			expectedLocale:   language.Chinese,
+			name:           "match parent locale when user accepts only child locale",
+			acceptLanguage: "zh-Hans",
+			supported:      []localization.Locale{en, zh},
+			expected:       zh,
 		},
 		{
-			name:             "match child locale when user accepts parent locale",
-			acceptLanguage:   "zh",
-			supportedLocales: []language.Tag{language.TraditionalChinese},
-			expectedLocale:   language.TraditionalChinese,
+			name:           "match child locale when user accepts only parent locale",
+			acceptLanguage: "zh",
+			supported:      []localization.Locale{en, zhHans},
+			expected:       zhHans,
 		},
 		{
-			name:             "prefer zh-Hans over zh-Hant when both supported",
-			acceptLanguage:   "zh",
-			supportedLocales: []language.Tag{language.SimplifiedChinese, language.TraditionalChinese},
-			expectedLocale:   language.SimplifiedChinese,
+			name:           "prefer zh-Hans over zh-Hant when both supported",
+			acceptLanguage: "zh",
+			supported:      []localization.Locale{en, zhHans, zhHant},
+			expected:       zhHans,
 		},
 		{
-			name:             "prefer exact zh over zh-Hans when zh is supported",
-			acceptLanguage:   "zh",
-			supportedLocales: []language.Tag{language.Chinese, language.SimplifiedChinese},
-			expectedLocale:   language.Chinese,
+			name:           "prefer exact zh over zh-Hans when user accepts only zh",
+			acceptLanguage: "zh",
+			supported:      []localization.Locale{zh, zhHans, zhHant},
+			expected:       zh,
 		},
 	}
+
+	createRouter := func(locales []localization.Locale) *chi.Mux {
+		r := chi.NewRouter()
+		r.Use(localization.LocalizedRoute(locales))
+		r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {})
+		return r
+	}
+
+	makeRequest := func(acceptLanguage string) *http.Request {
+		req := httptest.NewRequest("GET", "/index.html", nil)
+		req.Header.Set("Accept-Language", acceptLanguage)
+		return req
+	}
+
+	allLocs := []localization.Locale{ar, en, zh, zhHans, zhHant}
+	middleware := localization.NewLocalizedRouteMiddleware(allLocs)
+	extractLocale := middleware.ExtractLocale
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := chi.NewRouter()
-			r.Use(LocalizedRoute(tt.supportedLocales))
-			r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {})
-
-			req := httptest.NewRequest("GET", "/index.html", nil)
-			req.Header.Set("Accept-Language", tt.acceptLanguage)
+			r := createRouter(tt.supported)
+			req := makeRequest(tt.acceptLanguage)
 			rec := httptest.NewRecorder()
 			r.ServeHTTP(rec, req)
 
@@ -136,92 +163,103 @@ func TestLocalizedRouteAcceptLanguage(t *testing.T) {
 				t.Fatalf("empty Location header")
 			}
 
-			tag, _ := ParsePath(loc)
-			if tag != tt.expectedLocale {
-				t.Errorf("locale: got %v, want %v", tag, tt.expectedLocale)
+			locale, _ := extractLocale(loc)
+			if locale != tt.expected {
+				t.Errorf("locale: got %v, want %v", locale, tt.expected)
 			}
 		})
 	}
 }
 
-func TestParsePath(t *testing.T) {
+func TestExtractLocale(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name     string
-		urlPath  string
-		tag      language.Tag
-		trailing string
+		name      string
+		urlPath   string
+		localeTag string
+		trailing  string
 	}{
 		{
-			name:     "empty path",
-			urlPath:  "",
-			tag:      language.Und,
-			trailing: "/",
+			name:      "empty path",
+			urlPath:   "",
+			localeTag: "und",
+			trailing:  "/",
 		},
 		{
-			name:     "root path",
-			urlPath:  "/",
-			tag:      language.Und,
-			trailing: "/",
+			name:      "root path",
+			urlPath:   "/",
+			localeTag: "und",
+			trailing:  "/",
 		},
 		{
-			name:     "localized root path",
-			urlPath:  "/en/",
-			tag:      language.English,
-			trailing: "/",
+			name:      "localized root path",
+			urlPath:   "/en/",
+			localeTag: "en",
+			trailing:  "/",
 		},
 		{
-			name:     "localized root path without trailing slash",
-			urlPath:  "/en",
-			tag:      language.English,
-			trailing: "/",
+			name:      "localized root path without trailing slash",
+			urlPath:   "/en",
+			localeTag: "en",
+			trailing:  "/",
 		},
 		{
-			name:     "localized root path without leading slash",
-			urlPath:  "en/",
-			tag:      language.English,
-			trailing: "/",
+			name:      "localized root path without leading slash",
+			urlPath:   "en/",
+			localeTag: "en",
+			trailing:  "/",
 		},
 		{
-			name:     "localized root path without slashes",
-			urlPath:  "en",
-			tag:      language.English,
-			trailing: "/",
+			name:      "localized root path without slashes",
+			urlPath:   "en",
+			localeTag: "en",
+			trailing:  "/",
 		},
 		{
-			name:     "localized file path",
-			urlPath:  "/en/index.html",
-			tag:      language.English,
-			trailing: "/index.html",
+			name:      "localized file path",
+			urlPath:   "/en/index.html",
+			localeTag: "en",
+			trailing:  "/index.html",
 		},
 		{
-			name:     "localized nested file path",
-			urlPath:  "/en/sub/index.html",
-			tag:      language.English,
-			trailing: "/sub/index.html",
+			name:      "localized nested file path",
+			urlPath:   "/en/sub/index.html",
+			localeTag: "en",
+			trailing:  "/sub/index.html",
 		},
 		{
-			name:     "invalid locale",
-			urlPath:  "/xx/index.html",
-			tag:      language.Und,
-			trailing: "/xx/index.html",
+			name:      "invalid locale",
+			urlPath:   "/xx/index.html",
+			localeTag: "und",
+			trailing:  "/xx/index.html",
+		},
+		{
+			name:      "locale with region",
+			urlPath:   "/zh-hans/index.html",
+			localeTag: "zh-Hans",
+			trailing:  "/index.html",
 		},
 	}
+
+	locales := []localization.Locale{en, zhHans}
+	m := localization.NewLocalizedRouteMiddleware(locales)
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tag, trailing := ParsePath(tt.urlPath)
+			locale, trailing := m.ExtractLocale(tt.urlPath)
 
-			if tt.tag != tag {
-				t.Errorf("ParsePath(%q): tag = %v, want %v", tt.urlPath, tag, tt.tag)
+			if tt.localeTag != locale.Tag {
+				t.Errorf("ExtractLocale(%q): locale = %v, want %v",
+					tt.urlPath, locale.Tag, tt.localeTag)
 			}
 
 			if tt.trailing != trailing {
-				t.Errorf("ParsePath(%q): trailing = %v, want %v", tt.urlPath, trailing, tt.trailing)
+				t.Errorf("ExtractLocale(%q): trailing = %v, want %v",
+					tt.urlPath, trailing, tt.trailing)
 			}
 		})
 	}

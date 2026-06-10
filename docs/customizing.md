@@ -78,18 +78,20 @@ type IndexedPost struct {
     Title     string
 }
 
-type LanguageOption struct {
-    Code      string
-    Label     string
-    IsCurrent bool
-    URL       string
+type LocaleOption struct {
+    Tag         string
+    NativeName  string
+    Direction   string
+    WritingMode string
+    IsCurrent   bool
+    URL         string
 }
 
 type ViewModel struct {
-    LanguageOptions []LanguageOption
-    Language        LanguageOption
-    Translations    map[string]string
-    Data            []IndexedPost
+    LocaleOption []LocaleOption
+    Language     LocaleOption
+    Translations map[string]string
+    Data         []IndexedPost
 }
 ```
 
@@ -120,18 +122,20 @@ type ParsedPost struct {
     Published *time.Time
 }
 
-type LanguageOption struct {
-    Code      string
-    Label     string
-    IsCurrent bool
-    URL       string
+type LocaleOption struct {
+    Tag         string
+    NativeName  string
+    Direction   string
+    WritingMode string
+    IsCurrent   bool
+    URL         string
 }
 
 type ViewModel struct {
-    LanguageOptions []LanguageOption
-    Language        LanguageOption
-    Translations    map[string]string
-    Data            IndexedPost
+    LocaleOptions []LanguageOption
+    Locale        LanguageOption
+    Translations  map[string]string
+    Data          IndexedPost
 }
 ```
 

@@ -1,3 +1,22 @@
 {
-  "locales": ["en", "ar", "mn-Mong"]
+  "locales": [
+    {
+      "tag":"en",
+      "native_name": "English",
+      "direction": "ltr",
+      "writing_mode": "horizontal-tb"
+    },
+    {
+      "tag": "ar",
+      "native_name": "العربية",
+      "direction": "rtl",
+      "writing_mode": "horizontal-tb"
+    },
+    {
+      "tag": "mn-Mong",
+      "native_name": "ᠮᠣᠩᠭᠣᠯ",
+      "direction": "ltr",
+      "writing_mode": "vertical-lr"
+    }
+  ]
 }

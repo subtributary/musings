@@ -2,97 +2,127 @@ package localization
 
 import (
 	"context"
-	"log"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"golang.org/x/text/language"
 )
 
 type localeKey struct{}
 
-func LocaleFromContext(ctx context.Context) language.Tag {
-	if value, ok := ctx.Value(localeKey{}).(language.Tag); ok {
+// LocaleFromContext returns the locale set by the LocalizedRoute middleware.
+// If localization is disabled, UndLocale is returned.
+func LocaleFromContext(ctx context.Context) Locale {
+	if value, ok := ctx.Value(localeKey{}).(Locale); ok {
 		return value
 	}
-	log.Printf("Localization context is not set; LocalizedRoute middleware needs to be used.")
-	return language.Und
+	return UndLocale
 }
 
-func withLocale(ctx context.Context, tag language.Tag) context.Context {
-	return context.WithValue(ctx, localeKey{}, tag)
+func withLocale(ctx context.Context, locale Locale) context.Context {
+	return context.WithValue(ctx, localeKey{}, locale)
 }
 
-// LocalizedRoute enforces the locale in the URL unless the supported locales
-// include [language.Und]. In any case, it also sets the discovered locale in
-// the context. Paths starting with "/_" are not localized or redirected.
-func LocalizedRoute(tags []language.Tag) func(next http.Handler) http.Handler {
-	if len(tags) == 0 {
-		// Tags are fixed at startup. But just in case, fail quick:
-		panic("tags must contain at least one tag")
+// LocalizedRoute enforces localized routes if localization is enabled.
+// See LocalizedRouteMiddleware for details of localized route handling.
+func LocalizedRoute(locales []Locale) func(next http.Handler) http.Handler {
+	// If localization is disabled, do nothing.
+	if len(locales) == 0 {
+		return func(next http.Handler) http.Handler {
+			return next
+		}
 	}
 
-	matcher := language.NewMatcher(tags)
-
+	m := NewLocalizedRouteMiddleware(locales)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			chiContext := chi.RouteContext(r.Context())
-			reqPath := r.URL.Path
-
-			if !strings.HasPrefix(reqPath, "/") {
-				log.Printf("Expected slash prefix on path, got %q", reqPath)
-				reqPath = "/" + reqPath
-			}
-
-			// Reserved and system paths are not localized.
-			if strings.HasPrefix(reqPath, "/_") {
-				r = r.WithContext(withLocale(r.Context(), language.Und))
-				next.ServeHTTP(w, r)
+			r, ok := m.Handle(w, r)
+			if !ok {
 				return
 			}
 
-			// Get the localized path info; (Und, reqPath) if not localized.
-			tag, trailing := ParsePath(reqPath)
-
-			// Do not redirect if localized path or localization disabled.
-			if slices.Contains(tags, tag) {
-				r = r.WithContext(withLocale(r.Context(), tag))
-				chiContext.RoutePath = trailing
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// `tag` is invalid, so replace it with a good match.
-			lang := r.Header.Get("Accept-Language")
-			tag, i := language.MatchStrings(matcher, lang)
-			tag = tags[i] // See <https://github.com/golang/go/issues/24211>.
-
-			// Redirect the user to the localized path we found for them.
-			redirectURL := *r.URL
-			redirectURL.Path = "/" + tag.String() + reqPath
-			http.Redirect(w, r, redirectURL.String(), http.StatusFound)
+			next.ServeHTTP(w, r)
 		})
 	}
 }
 
-// ParsePath parses the locale out of the first segment of a path.
-// It returns the language tag and the remaining path after that.
-// If the locale is invalid or missing, then it returns (Und, reqPath).
-func ParsePath(reqPath string) (language.Tag, string) {
-	reqPath = strings.TrimLeft(reqPath, "/")
+// LocalizedRouteMiddleware enforces URLs that have the locale as the first
+// path segment. The locale can be read via LocaleFromContext, and the
+// context's RoutePath is updated to be the path after the locale.
+//
+// If the URL is not localized, then the response is a redirect to a localized
+// URL that has a configured locale that is best suited per the request.
+//
+// If the path begins with "/_", then the middleware has no effect.
+type LocalizedRouteMiddleware struct {
+	locales []Locale
+	matcher LocaleMatcher
+}
 
-	// Parse `loc/trailing/etc` into `["loc", "trailing/etc"]`.
-	segments := strings.SplitN(reqPath, "/", 2)
+func NewLocalizedRouteMiddleware(locales []Locale) *LocalizedRouteMiddleware {
+	return &LocalizedRouteMiddleware{
+		locales: locales,
+		matcher: NewLocaleMatcher(locales),
+	}
+}
 
-	tag, err := language.Parse(segments[0])
-	if err != nil {
-		return language.Und, "/" + reqPath
+// Handle processes and acts on the request. It returns and updated request and
+// whether the next middleware should be called.
+func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request) (*http.Request, bool) {
+	chiContext := chi.RouteContext(r.Context())
+	reqPath := r.URL.Path
+
+	if !strings.HasPrefix(reqPath, "/") {
+		reqPath = "/" + reqPath
 	}
 
-	if len(segments) > 1 {
-		return tag, "/" + segments[1]
+	// Reserved and system paths are not localized.
+	if strings.HasPrefix(reqPath, "/_") {
+		return r, true
 	}
-	return tag, "/"
+
+	// Get the localized path info; (UndLocale, reqPath) if not localized.
+	locale, trailing := m.ExtractLocale(reqPath)
+
+	// If the URL is not localized, redirect to a localized URL.
+	if locale == UndLocale {
+		accept := r.Header.Get("Accept-Language")
+		locale = m.matcher.Choose(accept)
+		tag := strings.ToLower(locale.Tag)
+
+		redirectURL := *r.URL
+		redirectURL.Path = "/" + tag + reqPath
+		http.Redirect(w, r, redirectURL.String(), http.StatusFound)
+
+		return nil, false
+	}
+
+	r = r.WithContext(withLocale(r.Context(), locale))
+	chiContext.RoutePath = trailing
+
+	return r, true
+}
+
+// ExtractLocale parses the locale out of the first segment of a path.
+// It returns the parsed locale and the remaining path after that.
+// If the locale is invalid or missing, then it returns (UndLocale, path).
+//
+// The path argument is asumed to begin with a forward slash.
+func (m *LocalizedRouteMiddleware) ExtractLocale(path string) (Locale, string) {
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	segments := strings.SplitN(path, "/", 3)
+
+	for _, locale := range m.locales {
+		if strings.EqualFold(locale.Tag, segments[1]) {
+			if len(segments) == 3 {
+				return locale, "/" + segments[2]
+			}
+			return locale, "/"
+		}
+	}
+
+	return UndLocale, path
 }

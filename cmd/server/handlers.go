@@ -14,7 +14,6 @@ import (
 	"github.com/subtributary/musings/internal/config"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/posts"
-	"golang.org/x/text/language"
 )
 
 func currentRoutePath(r *http.Request) string {
@@ -62,24 +61,26 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 
 func indexHandler(ctx context.Context, views *ViewFactory, cfg Config) http.HandlerFunc {
 	locales := cfg.Locales
-	if len(locales) == 0 {
-		locales = []language.Tag{language.Und}
+
+	// Even with no locales we still need a store, so use the Und locale.
+	if len(cfg.Locales) == 0 {
+		locales = []localization.Locale{localization.UndLocale}
 	}
 
-	stores := make(map[language.Tag]*posts.Store)
-	for _, tag := range locales {
-		path := config.LocalizedContentPath(tag)
+	stores := make(map[string]*posts.Store)
+	for _, locale := range locales {
+		path := config.LocalizedContentPath(locale)
 		store, err := posts.OpenStore(ctx, path)
 		if err != nil {
 			log.Fatalf("could not load store: %v", err)
 		}
-		stores[tag] = store
+		stores[locale.Tag] = store
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
-		results := slices.Collect(stores[locale].Search(query))
+		results := slices.Collect(stores[locale.Tag].Search(query))
 
 		err := views.Serve(w, r, "index",
 			WithData(results),
