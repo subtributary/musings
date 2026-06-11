@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/subtributary/musings/internal/config"
@@ -99,7 +100,8 @@ func (f *ViewFactory) setLocale(v *View, current localization.Locale, path strin
 
 	// If localization is enabled, set up locales and find current one.
 	for i, locale := range f.locales {
-		localizedPath, _ := url.JoinPath("/", locale.Tag, path)
+		tag := strings.ToLower(locale.Tag)
+		localizedPath, _ := url.JoinPath("/", tag, path)
 		option := LocaleOption{
 			Locale:    locale,
 			IsCurrent: locale == current,
