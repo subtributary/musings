@@ -13,7 +13,8 @@
                     {{.}}<br>
                 {{end}}
                 {{if ne .Data.Published nil}}
-                    published {{.Data.Published.Format "2006-01-02"}}<br>
+                    {{.Translations.Get "published"}}
+                    {{.Data.Published.Format "2006-01-02"}}<br>
                 {{end}}
             </div>
         </header>

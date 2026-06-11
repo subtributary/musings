@@ -3017,3 +3017,9 @@ article > header > .metadata {
   white-space: nowrap;
   width: 1px;
 }
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-image: url("/_static/media/background-dark.jpg");
+  }
+}
