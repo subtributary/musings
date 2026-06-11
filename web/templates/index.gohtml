@@ -5,6 +5,12 @@
 {{template "partials/header" .}}
 
 <main>
+    {{if eq (len .Data) 0}}
+        <article>
+            {{.Translations.Get "Zero matches"}}
+        </article>
+    {{end}}
+
     {{range .Data}}
         <article>
             <header>

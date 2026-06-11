@@ -4,6 +4,7 @@
     "Search": "بحث",
     "Select language": "اختر اللغة",
     "Website logo": "شعار الموقع",
+    "Zero matches": "لم يُرجِع استعلامك أي نتائج.",
     "published": "نُشر"
   },
   "en": {
@@ -11,6 +12,7 @@
     "Search": "Search",
     "Select language": "Select language",
     "Website logo": "Website logo",
+    "Zero matches": "Your query returned 0 matches.",
     "published": "published"
   },
   "mn-Mong": {
@@ -18,6 +20,7 @@
     "Search": "ᠬᠠᠶᠢᠬᠤ",
     "Select language": "ᠬᠡᠯᠡ ᠰᠣᠩᠭᠣᠬᠤ",
     "Website logo": "ᠸᠧᠪ ᠰᠠᠶᠢᠲ ᠤᠨ ᠯᠣᠭᠣ",
+    "Zero matches": "ᠲᠠᠨ ᠤ ᠬᠠᠢᠯᠲᠠ ᠶᠠᠮᠠᠷᠴᠤ ᠦᠷ\u180Eᠡ ᠳᠦᠩ ᠦᠭᠡᠢ.",
     "published": "ᠨᠡᠶᠢᠲᠡᠯᠡᠭᠳᠡᠪᠡ"
   }
 }
