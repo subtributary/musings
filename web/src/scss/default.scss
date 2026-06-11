@@ -1,3 +1,6 @@
+@use "_fonts";
+@use "_layout-rtl";
+@use "_layout-vert";
 @use "@picocss/pico/scss/pico" as * with (
   $theme-color: "yellow"
 );
@@ -36,6 +39,11 @@ body {
     display: flex;
     align-items: center;
 
+    ul {
+      right: 0;
+      left: auto;
+    }
+
     // Pico docs say nav dropdowns aren't full width, but they are here.
     // This should fix it until maybe hopefully an update fixes it.
     details.dropdown {
@@ -72,3 +80,4 @@ article>header {
   white-space: nowrap;
   width: 1px;
 }
+

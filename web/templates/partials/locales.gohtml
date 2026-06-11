@@ -8,9 +8,9 @@
                 aria-hidden="true"
             >文Ａ &ndash; {{.Locale.NativeName}}</span>
         </summary>
-        <ul dir="rtl">
+        <ul>
             {{range .LocaleOptions}}
-                <li dir="auto">
+                <li class="script-{{.Tag}}" dir="{{.Direction}}">
                     {{if .IsCurrent}}
                         <strong>{{.NativeName}}</strong>
                     {{else}}

@@ -70,6 +70,7 @@ func (f *ViewFactory) Create(r *http.Request, name string, opts ...ViewOption) (
 	if err := f.setTemplate(&v, name); err != nil {
 		return v, err
 	}
+	f.setRoot(&v, locale)
 
 	v.modified = v.tmpl.LastModified()
 
@@ -112,6 +113,13 @@ func (f *ViewFactory) setLocale(v *View, current localization.Locale, path strin
 	}
 }
 
+func (f *ViewFactory) setRoot(v *View, locale localization.Locale) {
+	if locale == localization.UndLocale {
+		v.model.RootURL = "/"
+	}
+	v.model.RootURL = "/" + locale.Tag + "/"
+}
+
 func (f *ViewFactory) setTemplate(v *View, name string) (err error) {
 	v.tmpl, err = f.templateStore.Lookup(name)
 	return
@@ -131,6 +139,7 @@ type ViewModel struct {
 	LocaleOptions []LocaleOption
 	Locale        LocaleOption
 	Translations  localization.Translations
+	RootURL       string
 	Data          any
 }
 

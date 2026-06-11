@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"slices"
+	"path"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -80,7 +80,15 @@ func indexHandler(ctx context.Context, views *ViewFactory, cfg Config) http.Hand
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
-		results := slices.Collect(stores[locale.Tag].Search(query))
+
+		var results []posts.IndexedPost
+		for result := range stores[locale.Tag].Search(query) {
+			if locale != localization.UndLocale {
+				tag := strings.ToLower(locale.Tag)
+				result.Path = "/" + path.Join(tag, result.Path)
+			}
+			results = append(results, result)
+		}
 
 		err := views.Serve(w, r, "index",
 			WithData(results),

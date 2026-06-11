@@ -1,4 +1,155 @@
 @charset "UTF-8";
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/_static/fonts/fonts/noto-sans-v42-latin-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/_static/fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Mongolian";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/_static/fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2") format("woff2");
+}
+:root[lang=en], .script-en {
+  font-family: "Noto Sans", sans-serif;
+}
+
+:root[lang=ar], .script-ar {
+  font-family: "Noto Sans Arabic", sans-serif;
+}
+
+:root[lang=mn-Mong], .script-mn-Mong {
+  font-family: "Noto Sans Mongolian", sans-serif;
+}
+:root[lang=mn-Mong] h1, :root[lang=mn-Mong] h2, :root[lang=mn-Mong] h3, :root[lang=mn-Mong] h4, :root[lang=mn-Mong] h5, :root[lang=mn-Mong] h6, .script-mn-Mong h1, .script-mn-Mong h2, .script-mn-Mong h3, .script-mn-Mong h4, .script-mn-Mong h5, .script-mn-Mong h6 {
+  font-family: inherit;
+}
+
+:root[dir=rtl] #main-nav .locale-switcher ul {
+  left: 0;
+  right: auto;
+}
+
+.vert-container, :root[writing-mode=vertical-lr] main, :root[writing-mode=vertical-lr] #main-nav, :root[writing-mode=vertical-lr] nav {
+  margin: auto 0;
+  max-height: 1450px;
+  max-width: unset;
+  height: 100%;
+  width: unset;
+}
+
+.vert-container-fluid, :root[writing-mode=vertical-lr] #main-header {
+  height: 100%;
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+  width: unset;
+}
+
+:root[writing-mode=vertical-lr] {
+  writing-mode: vertical-lr;
+  text-orientation: sideways;
+  width: 100%;
+  /* Clean up Pico which is meant for horizontal. */
+}
+:root[writing-mode=vertical-lr] body > header {
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown {
+  margin: 0 calc(var(--pico-nav-element-spacing-vertical) * -1);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > summary:not([role]) {
+  width: calc(1rem * var(--pico-line-height) + var(--pico-nav-link-spacing-vertical) * 2);
+  height: unset;
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul {
+  width: unset;
+  height: 100%;
+  margin-top: 0;
+  margin-left: var(--pico-outline-width);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul li:first-of-type {
+  margin-top: 0;
+  margin-left: calc(var(--pico-form-element-spacing-vertical) * 0.5);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul li {
+  width: auto;
+  height: 100%;
+  margin-right: 0;
+  padding: var(--pico-form-element-spacing-horizontal) calc(var(--pico-form-element-spacing-vertical) * 0.5);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul li a {
+  margin: calc(var(--pico-form-element-spacing-horizontal) * -1) calc(var(--pico-form-element-spacing-vertical) * -0.5);
+  padding: var(--pico-form-element-spacing-horizontal) calc(var(--pico-form-element-spacing-vertical) * 0.5);
+}
+:root[writing-mode=vertical-lr] article {
+  margin-bottom: 0;
+  margin-right: var(--pico-block-spacing-vertical);
+  padding: var(--pico-block-spacing-horizontal) var(--pico-block-spacing-vertical);
+}
+:root[writing-mode=vertical-lr] article > header {
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--pico-border-radius);
+  border-right: var(--pico-border-width) solid var(--pico-card-border-color);
+  border-bottom: none;
+  margin: calc(var(--pico-block-spacing-horizontal) * -1) var(--pico-block-spacing-vertical) calc(var(--pico-block-spacing-horizontal) * -1) calc(var(--pico-block-spacing-vertical) * -1);
+  padding: var(--pico-block-spacing-horizontal) calc(var(--pico-block-spacing-vertical) * 0.66);
+}
+:root[writing-mode=vertical-lr] article > footer {
+  margin: calc(var(--pico-block-spacing-horizontal) * -1) calc(var(--pico-block-spacing-vertical) * -1) calc(var(--pico-block-spacing-horizontal) * -1) var(--pico-block-spacing-vertical);
+  padding: var(--pico-block-spacing-horizontal) calc(var(--pico-block-spacing-vertical) * 0.66);
+}
+:root[writing-mode=vertical-lr] h1, :root[writing-mode=vertical-lr] h2, :root[writing-mode=vertical-lr] h3, :root[writing-mode=vertical-lr] h4, :root[writing-mode=vertical-lr] h5, :root[writing-mode=vertical-lr] h6 {
+  margin: 0 var(--pico-typography-spacing-vertical) 0 0;
+}
+:root[writing-mode=vertical-lr] input[type=search] {
+  background-position: center top calc(var(--pico-form-element-spacing-horizontal) + 0.125rem);
+  background-size: auto 1rem;
+  width: calc(1rem * var(--pico-line-height) + var(--pico-form-element-spacing-vertical) * 2 + var(--pico-border-width) * 2);
+  height: 100%;
+}
+:root[writing-mode=vertical-lr] li {
+  margin-bottom: 0;
+  margin-right: calc(var(--pico-typography-spacing-vertical) * 0.25);
+}
+:root[writing-mode=vertical-lr] main {
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+}
+:root[writing-mode=vertical-lr] p {
+  margin: 0 var(--pico-typography-spacing-vertical) 0 0;
+}
+:root[writing-mode=vertical-lr] ul {
+  padding-bottom: 0;
+}
+:root[writing-mode=vertical-lr] {
+  /* Now fix our own styles. */
+}
+:root[writing-mode=vertical-lr] body {
+  min-width: 100%;
+}
+:root[writing-mode=vertical-lr] #main-header {
+  border-right: 1px solid white;
+  border-bottom: none;
+}
+:root[writing-mode=vertical-lr] #main-nav ul {
+  right: auto;
+  bottom: 0;
+}
+:root[writing-mode=vertical-lr] {
+  /* And finally some vertical-specific styles */
+}
+:root[writing-mode=vertical-lr] main {
+  max-height: 1024px;
+}
+
 /*!
  * Pico CSS ✨ v2.1.1 (https://picocss.com)
  * Copyright 2019-2025 - Licensed under MIT
@@ -2835,6 +2986,10 @@ body {
 #main-nav .locale-switcher {
   display: flex;
   align-items: center;
+}
+#main-nav .locale-switcher ul {
+  right: 0;
+  left: auto;
 }
 #main-nav .locale-switcher details.dropdown {
   display: inline-block;
