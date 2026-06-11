@@ -1,9 +1,23 @@
 {
+  "ar": {
+    "Continue reading...": "تابع القراءة...",
+    "Search": "بحث",
+    "Select language": "اختر اللغة",
+    "Website logo": "شعار الموقع",
+    "published": "نُشر"
+  },
   "en": {
     "Continue reading...":  "Continue reading...",
     "Search": "Search",
     "Select language": "Select language",
     "Website logo": "Website logo",
     "published": "published"
+  },
+  "mn-Mong": {
+    "Continue reading...": "ᠦᠷᠭᠦᠯᠵᠢᠯᠡᠨ ᠤᠩᠰᠢᠬᠤ...",
+    "Search": "ᠬᠠᠶᠢᠬᠤ",
+    "Select language": "ᠬᠡᠯᠡ ᠰᠣᠩᠭᠣᠬᠤ",
+    "Website logo": "ᠸᠧᠪ ᠰᠠᠶᠢᠲ ᠤᠨ ᠯᠣᠭᠣ",
+    "published": "ᠨᠡᠶᠢᠲᠡᠯᠡᠭᠳᠡᠪᠡ"
   }
 }
