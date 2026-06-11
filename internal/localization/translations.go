@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-
-	"golang.org/x/text/language"
 )
 
 type Translations map[string]string
@@ -19,7 +17,7 @@ func (t Translations) Get(key string) string {
 	return key
 }
 
-type Store map[language.Tag]Translations
+type Store map[string]Translations
 
 func LoadStore(dataDir string) (Store, error) {
 	data, err := os.ReadFile(filepath.Join(dataDir, "translations.json"))
@@ -34,6 +32,6 @@ func LoadStore(dataDir string) (Store, error) {
 	return store, nil
 }
 
-func (s Store) For(locale language.Tag) Translations {
-	return s[locale]
+func (s Store) For(locale Locale) Translations {
+	return s[locale.Tag]
 }

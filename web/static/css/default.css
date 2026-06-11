@@ -1,4 +1,155 @@
 @charset "UTF-8";
+@font-face {
+  font-family: "Noto Sans";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/_static/fonts/fonts/noto-sans-v42-latin-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Arabic";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/_static/fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Noto Sans Mongolian";
+  font-style: normal;
+  font-weight: 400;
+  src: url("/_static/fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2") format("woff2");
+}
+:root[lang=en], .script-en {
+  font-family: "Noto Sans", sans-serif;
+}
+
+:root[lang=ar], .script-ar {
+  font-family: "Noto Sans Arabic", sans-serif;
+}
+
+:root[lang=mn-Mong], .script-mn-Mong {
+  font-family: "Noto Sans Mongolian", sans-serif;
+}
+:root[lang=mn-Mong] h1, :root[lang=mn-Mong] h2, :root[lang=mn-Mong] h3, :root[lang=mn-Mong] h4, :root[lang=mn-Mong] h5, :root[lang=mn-Mong] h6, .script-mn-Mong h1, .script-mn-Mong h2, .script-mn-Mong h3, .script-mn-Mong h4, .script-mn-Mong h5, .script-mn-Mong h6 {
+  font-family: inherit;
+}
+
+:root[dir=rtl] #main-nav .locale-switcher ul {
+  left: 0;
+  right: auto;
+}
+
+.vert-container, :root[writing-mode=vertical-lr] main, :root[writing-mode=vertical-lr] #main-nav, :root[writing-mode=vertical-lr] nav {
+  margin: auto 0;
+  max-height: 1450px;
+  max-width: unset;
+  height: 100%;
+  width: unset;
+}
+
+.vert-container-fluid, :root[writing-mode=vertical-lr] #main-header {
+  height: 100%;
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+  width: unset;
+}
+
+:root[writing-mode=vertical-lr] {
+  writing-mode: vertical-lr;
+  text-orientation: sideways;
+  width: 100%;
+  /* Clean up Pico which is meant for horizontal. */
+}
+:root[writing-mode=vertical-lr] body > header {
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown {
+  margin: 0 calc(var(--pico-nav-element-spacing-vertical) * -1);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > summary:not([role]) {
+  width: calc(1rem * var(--pico-line-height) + var(--pico-nav-link-spacing-vertical) * 2);
+  height: unset;
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul {
+  width: unset;
+  height: 100%;
+  margin-top: 0;
+  margin-left: var(--pico-outline-width);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul li:first-of-type {
+  margin-top: 0;
+  margin-left: calc(var(--pico-form-element-spacing-vertical) * 0.5);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul li {
+  width: auto;
+  height: 100%;
+  margin-right: 0;
+  padding: var(--pico-form-element-spacing-horizontal) calc(var(--pico-form-element-spacing-vertical) * 0.5);
+}
+:root[writing-mode=vertical-lr] nav details.dropdown > ul li a {
+  margin: calc(var(--pico-form-element-spacing-horizontal) * -1) calc(var(--pico-form-element-spacing-vertical) * -0.5);
+  padding: var(--pico-form-element-spacing-horizontal) calc(var(--pico-form-element-spacing-vertical) * 0.5);
+}
+:root[writing-mode=vertical-lr] article {
+  margin-bottom: 0;
+  margin-right: var(--pico-block-spacing-vertical);
+  padding: var(--pico-block-spacing-horizontal) var(--pico-block-spacing-vertical);
+}
+:root[writing-mode=vertical-lr] article > header {
+  border-top-right-radius: 0;
+  border-bottom-left-radius: var(--pico-border-radius);
+  border-right: var(--pico-border-width) solid var(--pico-card-border-color);
+  border-bottom: none;
+  margin: calc(var(--pico-block-spacing-horizontal) * -1) var(--pico-block-spacing-vertical) calc(var(--pico-block-spacing-horizontal) * -1) calc(var(--pico-block-spacing-vertical) * -1);
+  padding: var(--pico-block-spacing-horizontal) calc(var(--pico-block-spacing-vertical) * 0.66);
+}
+:root[writing-mode=vertical-lr] article > footer {
+  margin: calc(var(--pico-block-spacing-horizontal) * -1) calc(var(--pico-block-spacing-vertical) * -1) calc(var(--pico-block-spacing-horizontal) * -1) var(--pico-block-spacing-vertical);
+  padding: var(--pico-block-spacing-horizontal) calc(var(--pico-block-spacing-vertical) * 0.66);
+}
+:root[writing-mode=vertical-lr] h1, :root[writing-mode=vertical-lr] h2, :root[writing-mode=vertical-lr] h3, :root[writing-mode=vertical-lr] h4, :root[writing-mode=vertical-lr] h5, :root[writing-mode=vertical-lr] h6 {
+  margin: 0 var(--pico-typography-spacing-vertical) 0 0;
+}
+:root[writing-mode=vertical-lr] input[type=search] {
+  background-position: center top calc(var(--pico-form-element-spacing-horizontal) + 0.125rem);
+  background-size: auto 1rem;
+  width: calc(1rem * var(--pico-line-height) + var(--pico-form-element-spacing-vertical) * 2 + var(--pico-border-width) * 2);
+  height: 100%;
+}
+:root[writing-mode=vertical-lr] li {
+  margin-bottom: 0;
+  margin-right: calc(var(--pico-typography-spacing-vertical) * 0.25);
+}
+:root[writing-mode=vertical-lr] main {
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+}
+:root[writing-mode=vertical-lr] p {
+  margin: 0 var(--pico-typography-spacing-vertical) 0 0;
+}
+:root[writing-mode=vertical-lr] ul {
+  padding-bottom: 0;
+}
+:root[writing-mode=vertical-lr] {
+  /* Now fix our own styles. */
+}
+:root[writing-mode=vertical-lr] body {
+  min-width: 100%;
+}
+:root[writing-mode=vertical-lr] #main-header {
+  border-right: 1px solid white;
+  border-bottom: none;
+}
+:root[writing-mode=vertical-lr] #main-nav ul {
+  right: auto;
+  bottom: 0;
+}
+:root[writing-mode=vertical-lr] {
+  /* And finally some vertical-specific styles */
+}
+:root[writing-mode=vertical-lr] main {
+  max-height: 1024px;
+}
+
 /*!
  * Pico CSS ✨ v2.1.1 (https://picocss.com)
  * Copyright 2019-2025 - Licensed under MIT
@@ -223,7 +374,7 @@ details summary[role=button]:not(.outline)::after {
 }
 
 [aria-busy=true]:not(input, select, textarea):is(button, [type=submit], [type=button], [type=reset], [role=button]):not(.outline)::before {
-  filter: brightness(0) invert(1);
+  filter: brightness(0) invert(0);
 }
 
 /**
@@ -235,19 +386,19 @@ details summary[role=button]:not(.outline)::after {
   color-scheme: light;
   --pico-background-color: #fff;
   --pico-color: #373c44;
-  --pico-text-selection-color: rgba(0, 166, 110, 0.25);
+  --pico-text-selection-color: rgba(158, 146, 0, 0.25);
   --pico-muted-color: #646b79;
   --pico-muted-border-color: rgb(231, 234, 239.5);
-  --pico-primary: #007a50;
-  --pico-primary-background: #007a50;
+  --pico-primary: #756b00;
+  --pico-primary-background: #f2df0d;
   --pico-primary-border: var(--pico-primary-background);
-  --pico-primary-underline: rgba(0, 122, 80, 0.5);
-  --pico-primary-hover: #005f3d;
-  --pico-primary-hover-background: #006d46;
+  --pico-primary-underline: rgba(117, 107, 0, 0.5);
+  --pico-primary-hover: #5b5300;
+  --pico-primary-hover-background: #e8d600;
   --pico-primary-hover-border: var(--pico-primary-hover-background);
   --pico-primary-hover-underline: var(--pico-primary-hover);
-  --pico-primary-focus: rgba(0, 166, 110, 0.5);
-  --pico-primary-inverse: #fff;
+  --pico-primary-focus: rgba(158, 146, 0, 0.5);
+  --pico-primary-inverse: #000;
   --pico-secondary: #5d6b89;
   --pico-secondary-background: #525f7a;
   --pico-secondary-border: var(--pico-secondary-background);
@@ -307,7 +458,7 @@ details summary[role=button]:not(.outline)::after {
   --pico-switch-background-color: #bfc7d9;
   --pico-switch-checked-background-color: var(--pico-primary-background);
   --pico-switch-color: #fff;
-  --pico-switch-thumb-box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  --pico-switch-thumb-box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.25);
   --pico-range-border-color: #dfe3eb;
   --pico-range-active-border-color: #bfc7d9;
   --pico-range-thumb-border-color: var(--pico-background-color);
@@ -362,19 +513,19 @@ details summary[role=button]:not(.outline)::after {
     color-scheme: dark;
     --pico-background-color: rgb(19, 22.5, 30.5);
     --pico-color: #c2c7d0;
-    --pico-text-selection-color: rgba(0, 180, 120, 0.1875);
+    --pico-text-selection-color: rgba(173, 159, 0, 0.1875);
     --pico-muted-color: #7b8495;
     --pico-muted-border-color: #202632;
-    --pico-primary: #00b478;
-    --pico-primary-background: #007a50;
+    --pico-primary: #ad9f00;
+    --pico-primary-background: #f2df0d;
     --pico-primary-border: var(--pico-primary-background);
-    --pico-primary-underline: rgba(0, 180, 120, 0.5);
-    --pico-primary-hover: #00cc88;
-    --pico-primary-hover-background: #00895a;
+    --pico-primary-underline: rgba(173, 159, 0, 0.5);
+    --pico-primary-hover: #caba01;
+    --pico-primary-hover-background: rgb(247.5, 232, 96.5);
     --pico-primary-hover-border: var(--pico-primary-hover-background);
     --pico-primary-hover-underline: var(--pico-primary-hover);
-    --pico-primary-focus: rgba(0, 180, 120, 0.375);
-    --pico-primary-inverse: #fff;
+    --pico-primary-focus: rgba(173, 159, 0, 0.375);
+    --pico-primary-inverse: #000;
     --pico-secondary: #969eaf;
     --pico-secondary-background: #525f7a;
     --pico-secondary-border: var(--pico-secondary-background);
@@ -434,7 +585,7 @@ details summary[role=button]:not(.outline)::after {
     --pico-switch-background-color: #333c4e;
     --pico-switch-checked-background-color: var(--pico-primary-background);
     --pico-switch-color: #fff;
-    --pico-switch-thumb-box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    --pico-switch-thumb-box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.25);
     --pico-range-border-color: #202632;
     --pico-range-active-border-color: #2a3140;
     --pico-range-thumb-border-color: var(--pico-background-color);
@@ -497,19 +648,19 @@ details summary[role=button]:not(.outline)::after {
   color-scheme: dark;
   --pico-background-color: rgb(19, 22.5, 30.5);
   --pico-color: #c2c7d0;
-  --pico-text-selection-color: rgba(0, 180, 120, 0.1875);
+  --pico-text-selection-color: rgba(173, 159, 0, 0.1875);
   --pico-muted-color: #7b8495;
   --pico-muted-border-color: #202632;
-  --pico-primary: #00b478;
-  --pico-primary-background: #007a50;
+  --pico-primary: #ad9f00;
+  --pico-primary-background: #f2df0d;
   --pico-primary-border: var(--pico-primary-background);
-  --pico-primary-underline: rgba(0, 180, 120, 0.5);
-  --pico-primary-hover: #00cc88;
-  --pico-primary-hover-background: #00895a;
+  --pico-primary-underline: rgba(173, 159, 0, 0.5);
+  --pico-primary-hover: #caba01;
+  --pico-primary-hover-background: rgb(247.5, 232, 96.5);
   --pico-primary-hover-border: var(--pico-primary-hover-background);
   --pico-primary-hover-underline: var(--pico-primary-hover);
-  --pico-primary-focus: rgba(0, 180, 120, 0.375);
-  --pico-primary-inverse: #fff;
+  --pico-primary-focus: rgba(173, 159, 0, 0.375);
+  --pico-primary-inverse: #000;
   --pico-secondary: #969eaf;
   --pico-secondary-background: #525f7a;
   --pico-secondary-border: var(--pico-secondary-background);
@@ -569,7 +720,7 @@ details summary[role=button]:not(.outline)::after {
   --pico-switch-background-color: #333c4e;
   --pico-switch-checked-background-color: var(--pico-primary-background);
   --pico-switch-color: #fff;
-  --pico-switch-thumb-box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  --pico-switch-thumb-box-shadow: 0 0 0.5rem rgba(0, 0, 0, 0.25);
   --pico-range-border-color: #202632;
   --pico-range-active-border-color: #2a3140;
   --pico-range-thumb-border-color: var(--pico-background-color);
@@ -672,47 +823,7 @@ main {
 body > header,
 body > main,
 body > footer {
-  width: 100%;
-  margin-right: auto;
-  margin-left: auto;
-  padding: var(--pico-block-spacing-vertical) var(--pico-block-spacing-horizontal);
-}
-@media (min-width: 576px) {
-  body > header,
-  body > main,
-  body > footer {
-    max-width: 510px;
-    padding-right: 0;
-    padding-left: 0;
-  }
-}
-@media (min-width: 768px) {
-  body > header,
-  body > main,
-  body > footer {
-    max-width: 700px;
-  }
-}
-@media (min-width: 1024px) {
-  body > header,
-  body > main,
-  body > footer {
-    max-width: 950px;
-  }
-}
-@media (min-width: 1280px) {
-  body > header,
-  body > main,
-  body > footer {
-    max-width: 1200px;
-  }
-}
-@media (min-width: 1536px) {
-  body > header,
-  body > main,
-  body > footer {
-    max-width: 1450px;
-  }
+  padding-block: var(--pico-block-spacing-vertical);
 }
 
 /**
@@ -725,8 +836,9 @@ section {
 /**
  * Container
  */
-.container,
-.container-fluid {
+.container, #main-nav, main,
+.container-fluid,
+#main-header {
   width: 100%;
   margin-right: auto;
   margin-left: auto;
@@ -735,29 +847,29 @@ section {
 }
 
 @media (min-width: 576px) {
-  .container {
+  .container, #main-nav, main {
     max-width: 510px;
     padding-right: 0;
     padding-left: 0;
   }
 }
 @media (min-width: 768px) {
-  .container {
+  .container, #main-nav, main {
     max-width: 700px;
   }
 }
 @media (min-width: 1024px) {
-  .container {
+  .container, #main-nav, main {
     max-width: 950px;
   }
 }
 @media (min-width: 1280px) {
-  .container {
+  .container, #main-nav, main {
     max-width: 1200px;
   }
 }
 @media (min-width: 1536px) {
-  .container {
+  .container, #main-nav, main {
     max-width: 1450px;
   }
 }
@@ -2846,7 +2958,53 @@ textarea,
     transition-duration: 0s !important;
   }
 }
-/* Only show for screen readers. */
+html {
+  height: 100%;
+}
+
+body {
+  background-image: url("/_static/media/background-light.jpg");
+  background-position: top;
+  background-size: cover;
+  min-height: 100%;
+}
+
+#main-header {
+  border-bottom: 1px solid white;
+}
+
+#main-nav .brand {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  font-size: 1.2em;
+}
+#main-nav .search input {
+  margin-bottom: 0;
+}
+#main-nav .locale-switcher {
+  display: flex;
+  align-items: center;
+}
+#main-nav .locale-switcher ul {
+  right: 0;
+  left: auto;
+}
+#main-nav .locale-switcher details.dropdown {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+article > header {
+  display: flex;
+  justify-content: space-between;
+}
+article > header > .metadata {
+  color: var(--pico-muted-color);
+  font-size: 0.9em;
+}
+
 .sr-only {
   border: 0;
   clip: rect(0 0 0 0);
@@ -2858,4 +3016,10 @@ textarea,
   position: absolute;
   white-space: nowrap;
   width: 1px;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-image: url("/_static/media/background-dark.jpg");
+  }
 }

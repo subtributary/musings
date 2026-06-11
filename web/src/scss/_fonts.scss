@@ -1,0 +1,36 @@
+@font-face {
+  font-family: 'Noto Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/_static/fonts/fonts/noto-sans-v42-latin-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/_static/fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans Mongolian';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/_static/fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2') format('woff2');
+}
+
+:root[lang=en], .script-en {
+  font-family: "Noto Sans", sans-serif;
+}
+
+:root[lang=ar], .script-ar {
+  font-family: "Noto Sans Arabic", sans-serif;
+}
+
+:root[lang="mn-Mong"], .script-mn-Mong {
+  font-family: "Noto Sans Mongolian", sans-serif;
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: inherit;
+  }
+}

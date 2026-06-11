@@ -1,10 +1,26 @@
 {
-  "en": {
-    "Website logo": "Website logo",
-    "Select language": "Select language"
+  "ar": {
+    "Continue reading...": "تابع القراءة...",
+    "Search": "بحث",
+    "Select language": "اختر اللغة",
+    "Website logo": "شعار الموقع",
+    "Zero matches": "لم يُرجِع استعلامك أي نتائج.",
+    "published": "نُشر"
   },
-  "ko": {
-    "Website logo": "웹사이트 로고",
-    "Select language": "언어 선택"
+  "en": {
+    "Continue reading...":  "Continue reading...",
+    "Search": "Search",
+    "Select language": "Select language",
+    "Website logo": "Website logo",
+    "Zero matches": "Your query returned 0 matches.",
+    "published": "published"
+  },
+  "mn-Mong": {
+    "Continue reading...": "ᠦᠷᠭᠦᠯᠵᠢᠯᠡᠨ ᠤᠩᠰᠢᠬᠤ...",
+    "Search": "ᠬᠠᠶᠢᠬᠤ",
+    "Select language": "ᠬᠡᠯᠡ ᠰᠣᠩᠭᠣᠬᠤ",
+    "Website logo": "ᠸᠧᠪ ᠰᠠᠶᠢᠲ ᠤᠨ ᠯᠣᠭᠣ",
+    "Zero matches": "ᠲᠠᠨ ᠤ ᠬᠠᠢᠯᠲᠠ ᠶᠠᠮᠠᠷᠴᠤ ᠦᠷ\u180Eᠡ ᠳᠦᠩ ᠦᠭᠡᠢ.",
+    "published": "ᠨᠡᠶᠢᠲᠡᠯᠡᠭᠳᠡᠪᠡ"
   }
 }

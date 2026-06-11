@@ -1,23 +1,27 @@
 <!doctype HTML>
-<html lang="{{.Locale.Code}}">
+<html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" writing-mode="{{.Locale.WritingMode}}">
 {{template "partials/head"}}
 <body>
 {{template "partials/header" .}}
+
 <main>
-    <header>
-        <h1>{{.Data.Title}}</h1>
-        {{range .Data.Bylines}}
-            <div>{{.}}</div>
-        {{end}}
-        <div>Published: {{.Data.Published}}</div>
-        <br /> <!-- I'll do styling later. -->
-    </header>
-    {{.Data.Content}}
-    <footer>
-        {{range .Data.Tags}}
-            <div>#{{.}}</div>
-        {{end}}
-    </footer>
+    <article>
+        <header>
+            <h1 class="title">{{.Data.Title}}</h1>
+            <div class="metadata">
+                {{range .Data.Bylines}}
+                    {{.}}<br>
+                {{end}}
+                {{if ne .Data.Published nil}}
+                    {{.Translations.Get "published"}}
+                    {{.Data.Published.Format "2006-01-02"}}<br>
+                {{end}}
+            </div>
+        </header>
+
+        {{.Data.Content}}
+    </article>
 </main>
+
 </body>
 </html>

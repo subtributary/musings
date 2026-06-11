@@ -1,17 +1,20 @@
-{{if and (eq (len .LocaleOptions) 1) (eq .Locale.Code "und")}}
+{{if and (eq (len .LocaleOptions) 1) (eq .Locale.Tag "und")}}
     <!-- No languages are configured. -->
 {{else}}
-    <details class="dropdown locale-picker">
+    <details class="dropdown">
         <summary>
-            <span aria-label="{{.Translations.Get "Select Langauge"}}" aria-hidden="true">文Ａ &ndash; {{.Locale.Label}}</span>
+            <span
+                aria-label="{{.Translations.Get "Select Langauge"}}"
+                aria-hidden="true"
+            >文Ａ &ndash; {{.Locale.NativeName}}</span>
         </summary>
         <ul>
             {{range .LocaleOptions}}
-                <li>
+                <li class="script-{{.Tag}}" dir="{{.Direction}}">
                     {{if .IsCurrent}}
-                        <strong>{{.Label}}</strong>
+                        <strong>{{.NativeName}}</strong>
                     {{else}}
-                        <a href="{{.URL}}">{{.Label}}</a>
+                        <a href="{{.URL}}">{{.NativeName}}</a>
                     {{end}}
                 </li>
             {{end}}

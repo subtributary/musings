@@ -1,0 +1,145 @@
+.vert-container {
+  margin: auto 0;
+  max-height: 1450px;
+  max-width: unset;
+  height: 100%;
+  width: unset;
+}
+
+.vert-container-fluid {
+  height: 100%;
+  padding-top: var(--pico-spacing);
+  padding-bottom: var(--pico-spacing);
+  width: unset;
+}
+
+:root[writing-mode="vertical-lr"] {
+  writing-mode: vertical-lr;
+  text-orientation: sideways;
+  width: 100%;
+
+  /* Clean up Pico which is meant for horizontal. */
+
+  body > header {
+    padding-top: var(--pico-spacing);
+    padding-bottom: var(--pico-spacing);
+  }
+
+  nav {
+    @extend .vert-container;
+
+    details.dropdown {
+      margin: 0 calc(var(--pico-nav-element-spacing-vertical) * -1);
+
+      & > summary:not([role]) {
+        width: calc(1rem * var(--pico-line-height) + var(--pico-nav-link-spacing-vertical) * 2);
+        height: unset;
+      }
+
+      & > ul {
+        width: unset;
+        height: 100%;
+        margin-top: 0;
+        margin-left: var(--pico-outline-width);
+
+        li:first-of-type {
+          margin-top: 0;
+          margin-left: calc(var(--pico-form-element-spacing-vertical) * 0.5);
+        }
+
+        li {
+          width: auto;
+          height: 100%;
+          margin-right: 0;
+          padding: var(--pico-form-element-spacing-horizontal) calc(var(--pico-form-element-spacing-vertical) * 0.5);
+
+          a {
+            margin: calc(var(--pico-form-element-spacing-horizontal) * -1) calc(var(--pico-form-element-spacing-vertical) * -0.5);
+            padding: var(--pico-form-element-spacing-horizontal) calc(var(--pico-form-element-spacing-vertical) * 0.5);
+          }
+        }
+      }
+    }
+  }
+
+  article {
+    margin-bottom: 0;
+    margin-right: var(--pico-block-spacing-vertical);
+    padding: var(--pico-block-spacing-horizontal) var(--pico-block-spacing-vertical);
+
+    & > header {
+      border-top-right-radius: 0;
+      border-bottom-left-radius: var(--pico-border-radius);
+      border-right: var(--pico-border-width) solid var(--pico-card-border-color);
+      border-bottom: none;
+      margin: calc(var(--pico-block-spacing-horizontal) * -1) var(--pico-block-spacing-vertical) calc(var(--pico-block-spacing-horizontal) * -1) calc(var(--pico-block-spacing-vertical) * -1);
+      padding: var(--pico-block-spacing-horizontal) calc(var(--pico-block-spacing-vertical) * 0.66);
+    }
+
+    & > footer {
+      margin: calc(var(--pico-block-spacing-horizontal) * -1) calc(var(--pico-block-spacing-vertical) * -1) calc(var(--pico-block-spacing-horizontal) * -1) var(--pico-block-spacing-vertical);
+      padding: var(--pico-block-spacing-horizontal) calc(var(--pico-block-spacing-vertical) * 0.66);
+    }
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0 var(--pico-typography-spacing-vertical) 0 0;
+  }
+
+  input[type="search"] {
+    background-position: center top calc(var(--pico-form-element-spacing-horizontal) + 0.125rem);
+    background-size: auto 1rem;
+    width: calc(1rem * var(--pico-line-height) + var(--pico-form-element-spacing-vertical) * 2 + var(--pico-border-width) * 2);
+    height: 100%;
+  }
+
+  li {
+    margin-bottom: 0;
+    margin-right: calc(var(--pico-typography-spacing-vertical) * 0.25);
+  }
+
+  main {
+    // Just use padding instead of media query-based height.
+    padding-top: var(--pico-spacing);
+    padding-bottom: var(--pico-spacing);
+  }
+
+  p {
+    margin: 0 var(--pico-typography-spacing-vertical) 0 0;
+  }
+
+  ul {
+    padding-bottom: 0;
+  }
+
+  /* Now fix our own styles. */
+
+  body {
+    min-width: 100%;
+  }
+
+  #main-header {
+    @extend .vert-container-fluid;
+    border-right: 1px solid white;
+    border-bottom: none;
+  }
+
+  #main-nav {
+    @extend .vert-container;
+
+    ul {
+      right: auto;
+      bottom: 0;
+    }
+  }
+
+  main {
+    @extend .vert-container;
+  }
+
+  /* And finally some vertical-specific styles */
+
+  main {
+    max-height: 1024px;
+  }
+}

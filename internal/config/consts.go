@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/text/language"
+	"github.com/subtributary/musings/internal/localization"
 )
 
 const (
@@ -14,10 +14,10 @@ const (
 	TemplatesPath = "./web/templates/"
 )
 
-func LocalizedContentPath(locale language.Tag) string {
-	if locale == language.Und {
+func LocalizedContentPath(locale localization.Locale) string {
+	if locale == localization.UndLocale {
 		return ContentPath
 	}
-	localePath := strings.ToLower(locale.String())
+	localePath := strings.ToLower(locale.Tag)
 	return filepath.Join(ContentPath, localePath)
 }

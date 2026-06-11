@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/subtributary/musings/internal/config"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/templates"
-	"golang.org/x/text/language"
-	"golang.org/x/text/language/display"
 )
 
 type ViewOption func(*View) error
@@ -36,7 +35,7 @@ func WithDataModified(when time.Time) ViewOption {
 }
 
 type ViewFactory struct {
-	locales       []language.Tag
+	locales       []localization.Locale
 	templateStore templates.Store
 	translations  localization.Store
 }
@@ -67,11 +66,12 @@ func (f *ViewFactory) Create(r *http.Request, name string, opts ...ViewOption) (
 	locale := localization.LocaleFromContext(r.Context())
 	path := currentRoutePath(r)
 
-	f.setLanguage(&v, locale, path)
+	f.setLocale(&v, locale, path)
 	f.setTranslations(&v, locale)
 	if err := f.setTemplate(&v, name); err != nil {
 		return v, err
 	}
+	f.setRoot(&v, locale)
 
 	v.modified = v.tmpl.LastModified()
 
@@ -93,25 +93,33 @@ func (f *ViewFactory) Serve(w http.ResponseWriter, r *http.Request, name string,
 	return v.Serve(w)
 }
 
-func (f *ViewFactory) setLanguage(v *View, current language.Tag, path string) {
-	v.model.LocaleOptions = make([]LocaleOption, 0, len(f.locales))
-	v.model.Locale = LocaleOption{IsCurrent: true, URL: "/"}
+func (f *ViewFactory) setLocale(v *View, current localization.Locale, path string) {
+	// These defaults work when localization is disabled.
+	v.model.LocaleOptions = make([]LocaleOption, len(f.locales))
+	v.model.Locale = LocaleOption{Locale: current, IsCurrent: true, URL: "/"}
 
-	for _, tag := range f.locales {
-		code := tag.String()
-		localizedPath, _ := url.JoinPath("/", code, path)
+	// If localization is enabled, set up locales and find current one.
+	for i, locale := range f.locales {
+		tag := strings.ToLower(locale.Tag)
+		localizedPath, _ := url.JoinPath("/", tag, path)
 		option := LocaleOption{
-			Code:      code,
-			Label:     display.Self.Name(tag),
-			IsCurrent: tag == current,
+			Locale:    locale,
+			IsCurrent: locale == current,
 			URL:       localizedPath,
 		}
 
-		v.model.LocaleOptions = append(v.model.LocaleOptions, option)
+		v.model.LocaleOptions[i] = option
 		if option.IsCurrent {
 			v.model.Locale = option
 		}
 	}
+}
+
+func (f *ViewFactory) setRoot(v *View, locale localization.Locale) {
+	if locale == localization.UndLocale {
+		v.model.RootURL = "/"
+	}
+	v.model.RootURL = "/" + locale.Tag + "/"
 }
 
 func (f *ViewFactory) setTemplate(v *View, name string) (err error) {
@@ -119,13 +127,12 @@ func (f *ViewFactory) setTemplate(v *View, name string) (err error) {
 	return
 }
 
-func (f *ViewFactory) setTranslations(v *View, locale language.Tag) {
+func (f *ViewFactory) setTranslations(v *View, locale localization.Locale) {
 	v.model.Translations = f.translations.For(locale)
 }
 
 type LocaleOption struct {
-	Code      string
-	Label     string
+	localization.Locale
 	IsCurrent bool
 	URL       string
 }
@@ -134,6 +141,7 @@ type ViewModel struct {
 	LocaleOptions []LocaleOption
 	Locale        LocaleOption
 	Translations  localization.Translations
+	RootURL       string
 	Data          any
 }
 
