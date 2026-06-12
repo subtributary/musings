@@ -16,7 +16,12 @@ func TestLocaleMatcher_Choose(t *testing.T) {
 		want    localization.Locale
 	}{
 		{
-			name:    "empty accept",
+			name:    "no accept, no configured locale",
+			locales: []localization.Locale{},
+			want:    und,
+		},
+		{
+			name:    "no accept, has configured locales",
 			locales: []localization.Locale{ar, en},
 			want:    ar,
 		},
@@ -55,6 +60,12 @@ func TestLocaleMatcher_Choose(t *testing.T) {
 			locales: []localization.Locale{ar, en, enGB},
 			accept:  "en;q=0.5, en-GB;q=0.9",
 			want:    enGB,
+		},
+		{
+			name:    "prefer zh-Hans over zh-Hant",
+			locales: []localization.Locale{zhHant, zhHans},
+			accept:  "zh",
+			want:    zhHans,
 		},
 	}
 
