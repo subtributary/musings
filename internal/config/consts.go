@@ -2,7 +2,6 @@ package config
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/subtributary/musings/internal/localization"
 )
@@ -18,6 +17,5 @@ func LocalizedContentPath(locale localization.Locale) string {
 	if locale == localization.UndLocale {
 		return ContentPath
 	}
-	localePath := strings.ToLower(locale.Tag)
-	return filepath.Join(ContentPath, localePath)
+	return filepath.Join(ContentPath, locale.Tag)
 }

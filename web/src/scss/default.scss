@@ -8,7 +8,7 @@
 html { height: 100%; }
 
 body {
-  background-image: url('/_static/media/background-light.jpg');
+  background-image: url('/_static/images/background-light.jpg');
   background-position: top;
   background-size: cover;
 
@@ -83,6 +83,6 @@ article>header {
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-image: url('/_static/media/background-dark.jpg');
+    background-image: url('/_static/images/background-dark.jpg');
   }
 }

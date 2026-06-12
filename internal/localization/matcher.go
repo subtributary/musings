@@ -2,11 +2,11 @@ package localization
 
 import (
 	"log"
-	"strings"
 
 	"golang.org/x/text/language"
 )
 
+// LocaleMatcher matches an Accept-Language value to a configured locale.
 type LocaleMatcher struct {
 	locales []Locale
 	matcher language.Matcher
@@ -35,19 +35,10 @@ func NewLocaleMatcher(locales []Locale) LocaleMatcher {
 // If no best match is found, then the first configured locale is returned.
 // If no locales are configured, then UndLocale is returned.
 func (m *LocaleMatcher) Choose(acceptLanguage string) Locale {
-	tag, i := language.MatchStrings(m.matcher, acceptLanguage)
-	tag = m.tags[i] // See <https://github.com/golang/go/issues/24211>.
-
-	tagStr := tag.String()
-	for _, locale := range m.locales {
-		if strings.EqualFold(locale.Tag, tagStr) {
-			return locale
-		}
+	if len(m.locales) == 0 {
+		return UndLocale
 	}
 
-	if len(m.locales) > 0 {
-		return m.locales[0]
-	}
-
-	return UndLocale
+	_, i := language.MatchStrings(m.matcher, acceptLanguage)
+	return m.locales[i]
 }

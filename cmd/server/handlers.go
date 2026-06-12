@@ -30,9 +30,9 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimLeft(r.URL.Path, "/") + ".md"
+		filePath := strings.TrimLeft(r.URL.Path, "/") + ".md"
 
-		info, err := fs.Stat(root.FS(), path)
+		info, err := fs.Stat(root.FS(), filePath)
 		if errors.Is(err, fs.ErrNotExist) {
 			// It's not a Markdown file, so use the Go file server.
 			fallback.ServeHTTP(w, r)
@@ -42,7 +42,7 @@ func contentHandler(views *ViewFactory) http.HandlerFunc {
 			return
 		}
 
-		content, err := parser.ParseFile(root.FS(), path)
+		content, err := parser.ParseFile(root.FS(), filePath)
 		if err != nil {
 			writeError(w, err)
 			return
@@ -69,8 +69,8 @@ func indexHandler(ctx context.Context, views *ViewFactory, cfg Config) http.Hand
 
 	stores := make(map[string]*posts.Store)
 	for _, locale := range locales {
-		path := config.LocalizedContentPath(locale)
-		store, err := posts.OpenStore(ctx, path)
+		locPath := config.LocalizedContentPath(locale)
+		store, err := posts.OpenStore(ctx, locPath)
 		if err != nil {
 			log.Fatalf("could not load store: %v", err)
 		}

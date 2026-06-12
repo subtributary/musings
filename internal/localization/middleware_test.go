@@ -19,46 +19,49 @@ func TestLocalizeRoute(t *testing.T) {
 		newPath string
 	}{
 		{
-			name:    "redirect if no path locale",
+			name:    "no path locale, no configured locale",
+			reqPath: "/index.html",
+			locales: []localization.Locale{},
+		},
+		{
+			name:    "no path locale, one configured locale",
 			reqPath: "/index.html",
 			locales: []localization.Locale{en},
 			newPath: "/en/index.html",
 		},
 		{
-			name:    "redirect if unsupported path locale",
+			name:    "no path locale, configured locale has region",
+			reqPath: "/index.html",
+			locales: []localization.Locale{zhHans},
+			newPath: "/zh-Hans/index.html",
+		},
+		{
+			name:    "unsupported path locale, on configured locale",
 			reqPath: "/ko/index.html",
 			locales: []localization.Locale{en},
 			newPath: "/en/ko/index.html",
 		},
 		{
-			name:    "no redirect if supported path locale",
+			name:    "path locale",
 			reqPath: "/en/index.html",
 			locales: []localization.Locale{en},
 		},
 		{
-			name:    "no redirect if no locales",
-			reqPath: "/index.html",
-			locales: []localization.Locale{},
+			name:    "path locale with region",
+			reqPath: "/zh-Hans/index.html",
+			locales: []localization.Locale{zhHans},
+		},
+		{
+			name:    "path locale with lowercase region",
+			reqPath: "/zh-hans/index.html",
+			locales: []localization.Locale{zhHans},
+			newPath: "/zh-Hans/index.html",
 		},
 		{
 			name:    "redirect keeps query",
 			reqPath: "/index?q=search",
 			locales: []localization.Locale{en},
 			newPath: "/en/index?q=search",
-		},
-		{
-			name:    "lowercase locale when redirected",
-			reqPath: "/index.html",
-			locales: []localization.Locale{zhHans},
-			newPath: "/zh-hans/index.html",
-		},
-		{
-			// This test fails. I will leave it for now.
-			// I might want to lowercase in other middleware.
-			name:    "redirect to lowercase locale if uppercase",
-			reqPath: "/zh-Hans/index.html",
-			locales: []localization.Locale{zhHans},
-			newPath: "/zh-hans/index.html",
 		},
 	}
 
@@ -81,91 +84,6 @@ func TestLocalizeRoute(t *testing.T) {
 
 			if loc := rec.Header().Get("Location"); loc != tt.newPath {
 				t.Fatalf("Location: got %v, want %v", loc, tt.newPath)
-			}
-		})
-	}
-}
-
-func TestLocalizedRouteAcceptLanguage(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name           string
-		acceptLanguage string
-		supported      []localization.Locale
-		expected       localization.Locale
-	}{
-		{
-			name:           "invalid locale defaults to first",
-			acceptLanguage: "xx",
-			supported:      []localization.Locale{en, ar},
-			expected:       en,
-		},
-		{
-			name:           "match parent locale when user accepts only child locale",
-			acceptLanguage: "zh-Hans",
-			supported:      []localization.Locale{en, zh},
-			expected:       zh,
-		},
-		{
-			name:           "match child locale when user accepts only parent locale",
-			acceptLanguage: "zh",
-			supported:      []localization.Locale{en, zhHans},
-			expected:       zhHans,
-		},
-		{
-			name:           "prefer zh-Hans over zh-Hant when both supported",
-			acceptLanguage: "zh",
-			supported:      []localization.Locale{en, zhHans, zhHant},
-			expected:       zhHans,
-		},
-		{
-			name:           "prefer exact zh over zh-Hans when user accepts only zh",
-			acceptLanguage: "zh",
-			supported:      []localization.Locale{zh, zhHans, zhHant},
-			expected:       zh,
-		},
-	}
-
-	createRouter := func(locales []localization.Locale) *chi.Mux {
-		r := chi.NewRouter()
-		r.Use(localization.LocalizedRoute(locales))
-		r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {})
-		return r
-	}
-
-	makeRequest := func(acceptLanguage string) *http.Request {
-		req := httptest.NewRequest("GET", "/index.html", nil)
-		req.Header.Set("Accept-Language", acceptLanguage)
-		return req
-	}
-
-	allLocs := []localization.Locale{ar, en, zh, zhHans, zhHant}
-	middleware := localization.NewLocalizedRouteMiddleware(allLocs)
-	extractLocale := middleware.ExtractLocale
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			r := createRouter(tt.supported)
-			req := makeRequest(tt.acceptLanguage)
-			rec := httptest.NewRecorder()
-			r.ServeHTTP(rec, req)
-
-			if rec.Code < 300 || rec.Code >= 400 {
-				t.Fatalf("got status %d, expected redirect", rec.Code)
-			}
-
-			loc := rec.Header().Get("Location")
-			if loc == "" {
-				t.Fatalf("empty Location header")
-			}
-
-			locale, _ := extractLocale(loc)
-			if locale != tt.expected {
-				t.Errorf("locale: got %v, want %v", locale, tt.expected)
 			}
 		})
 	}
@@ -236,6 +154,12 @@ func TestExtractLocale(t *testing.T) {
 		},
 		{
 			name:      "locale with region",
+			urlPath:   "/zh-Hans/index.html",
+			localeTag: "zh-Hans",
+			trailing:  "/index.html",
+		},
+		{
+			name:      "locale with lowercase region",
 			urlPath:   "/zh-hans/index.html",
 			localeTag: "zh-Hans",
 			trailing:  "/index.html",

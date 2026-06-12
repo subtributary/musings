@@ -32,7 +32,7 @@ var (
 		Direction:   "ltr",
 		WritingMode: "vertical-lr",
 	}
-	zh     = localization.Locale{Tag: "zh"}
+	und    = localization.Locale{Tag: "und"}
 	zhHans = localization.Locale{Tag: "zh-Hans"}
 	zhHant = localization.Locale{Tag: "zh-Hant"}
 )
