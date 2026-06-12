@@ -1,36 +1,29 @@
 # Creating content
 
-Musings is a publishing tool with a focus on text-heavy content like blogs, stories, and news websites.
+Website content and routes are defined by the contents of "content/".
+Files are served at routes based on their file paths.
 
-## Content directory and routes
+Markdown (.md) files are rendered to HTML and served at routes matching their file paths minus the ".md".
+Other files, such as images, are served unchanged at a routes matching their file paths.
+For example, "content/2026/vacation.md" is rendered as HTML and served at "/2026/vacation",
+and "content/2026/hotel-view.jpg" is served at "/2026/hotel-view.jpg".
 
-The "content" directory stores the served content.
-The internal directory structure is not restricted,
-except for localization rules,
-allowing you to organize content and routes as desired.
+## Naming convention
 
-The routes for the content files match their paths under "content",
-but Markdown ("*.md") files have their extensions trimmed.
-For example, "content/hello.md" will be at the URL "/hello",
-and "content/hello.png" will be at the URL "/hello.png".
+Musings is flexible when it comes to file names,
+but these following these guidelines will yield the best experience:
 
-If a Markdown file and another file resolve to the same route,
-then the behavior is undefined and should be avoided.
-For example, "content/hello.png.md" and "content/hello.png" resolve to the same route.
-
-If localization is enabled, 
-then the immediate subdirectories of the "content" directory must be the configured locales.
-The routes will still match the directory structure. 
+* File names must be lowercase.
+* File names must include an extension.
+* File names must not contain spaces or underscores—use `-` to delimit words.
+* Directory names must be lowercase.
+    * The exception to this is locale region names. (See [localizing.md].)
 
 
-## Content format
+## Markdown content format
 
-The content must follow CommonMark specifications with a few additions.
-Musings adds plugin support (coming soon!) and metadata to the format.
-
-### Plugins
-
-(To be implemented.)
+Markdown (.md) files must follow CommonMark specifications with a few additions:
+Musings adds plugin support and metadata to the format.
 
 ### Metadata
 
@@ -57,6 +50,10 @@ By default, content is sorted by publication date on the index.
 If a publication date is omitted for a document, that document is sorted above others that have a publication date.
 If a publication date is in the future, that document is not listed on the index.
 
+### Plugins
+
+(Coming soon!)
+
 ## Localization
 
-See [localizing](localizing.md) for how to localize content.
+See [localizing](localizing.md) to learn how to localize content.

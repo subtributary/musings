@@ -1,19 +1,18 @@
 # Customizing
 
 The frontend of Musings can be customized, but it is a technical process not meant for the end user.
-If end user customization is desired, a user-friendly tool complete with sanitization should be used.
+If end user customization is required, a user-friendly tool complete with sanitization should be used.
 This document details the technical process of customizing Musings.
-
 
 ## Customization areas
 
 Customization is performed by modifying files within the repository or deployment.
 The following areas are intended to be customized:
 
- - Styles ("web/src/scss/" and "web/static/css/")
- - Scripts ("web/src/ts/" and "web/static/js/")
- - Templates ("web/templates/")
- - Media ("web/static/media/")
+- Styles ("web/src/scss/" and "web/static/css/")
+- Scripts ("web/src/ts/" and "web/static/js/")
+- Other static assets ("web/static/\<type\>")
+- Templates ("web/templates/")
 
 Other areas of the codebase should be considered internal and should not be edited per deployment.
 
@@ -37,14 +36,17 @@ A file here may be overwritten if it shares a name with a file in "web/src/scss/
 (A solution for this is proposed in [Musings issue #43](https://github.com/subtributary/musings/issues/43).)
 
 
-## Adding media
+## Adding media and other assets
 
-Additional assets *to be used for customization* should be placed under "web/static/media/".
-Assets used by content should not be placed here 
+Additional assets *to be used for customization* should be placed in a subdirectory of "web/static/".
+The subdirectory should be named after the asset type: "fonts", "images", etc.
+
+Additional assets *to be used for customization* should be placed under "web/static/".
+Assets used by content should not be placed here
 because they are managed separately from customization assets.
 (See [content.md](content.md) for where to put content media.)
 
-The media directory is served at "/_static/media".
+The subdirectories are served at "/_static/\<name\>/".
 
 
 ## Editing the templates
@@ -53,30 +55,12 @@ Templates are Go Templates with a ".gohtml" file extension in the "/web/template
 
 The main templates are:
 
- * index.gohtml
- * post.gohtml
+* index.gohtml
+* post.gohtml
 
-More details on the the main templates are below.
-
-Partial templates to support the main templates are in the "templates/partials" directory.
-These are named as their file name without the extension and with "partials/" prefixed;
-for example, "/emplates/partials/head.gohtml" is named "partials/head".
-The name is used to include the partial in another template.
-
-###  index.gohtml
-
-The "index.gohtml" file is the template for the website index, or landing page.
-It is served at "/" and "/?q=".
-
-The view model for the index is:
+All templates start with this view model:
 
 ```go
-type IndexedPost struct {
-    Path      string
-    Bylines   []string
-    Published *time.Time
-    Title     string
-}
 
 type LocaleOption struct {
     Tag         string
@@ -91,28 +75,46 @@ type ViewModel struct {
     LocaleOption []LocaleOption
     Language     LocaleOption
     Translations map[string]string
-    Data         []IndexedPost
+    Data         []any
 }
 ```
 
-When not responding to a search, 
+The structure of the `Data` property depends on the view.
+
+###  index.gohtml
+
+The "index.gohtml" file is the template for the website index, or home page.
+
+The index is served at "/" (or "/q=" when searching).
+
+The structure of the  view model's `Data` property for the index is:
+
+```go
+type IndexedPost struct {
+    Path      string
+    Bylines   []string
+    Published *time.Time
+    Title     string
+}
+```
+
+When not responding to a search,
 the posts in the view model are sorted by publication date with the most recent one first.
-Posts with no publication date are listed first and sorted by title then path.
+Posts with no publication date are listed first, sorted by title then path.
 Posts with a future publication date are omitted.
 
 When responding to a search,
 the posts in the view model are sorted by how well they match the search query.
-Non-matches are omitted.
-Posts with a future publication date are omitted.
+Non-matches and posts with a future publication date are omitted.
 
 ### post.gohtml
 
 The "post.gohtml" file is the template for posts in "content/".
 (See [content.md](content.md) for how to create the content.)
 
-The posts are served at routes that match the structure of the "content" directory.
+Posts are served at routes that match the structure of the "content" directory.
 
-The view model for this template is shaped like this:
+The structure of the view model's `Data` property for the post is:
 
 ```go
 type ParsedPost struct {
@@ -121,21 +123,13 @@ type ParsedPost struct {
     Bylines   []string
     Published *time.Time
 }
-
-type LocaleOption struct {
-    Tag         string
-    NativeName  string
-    Direction   string
-    WritingMode string
-    IsCurrent   bool
-    URL         string
-}
-
-type ViewModel struct {
-    LocaleOptions []LanguageOption
-    Locale        LanguageOption
-    Translations  map[string]string
-    Data          IndexedPost
-}
 ```
 
+### partials
+
+Partial templates to support the main templates are in the "templates/partials" directory.
+A partial's name is its  file name without the extension and with "partials/" prefixed;
+for example, "/templates/partials/head.gohtml" is named "partials/head".
+The name is used to include the partial in another template.
+
+The view model for a partial is whatever is passed to it from another template.
