@@ -1,10 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -51,54 +52,56 @@ func (h *Handlers) Close() error {
 }
 
 func (h *Handlers) ContentHandler() http.HandlerFunc {
-	fileHandler := h.FileHandler(h.contentRoot.FS())
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		filePath := strings.TrimLeft(r.URL.Path, "/") + ".md"
+		name := strings.TrimPrefix(r.URL.Path, "/")
 
-		info, err := fs.Stat(h.contentRoot.FS(), filePath)
-		switch {
-		case os.IsNotExist(err):
-			// It's not a Markdown file, so use the file server.
-			fileHandler.ServeHTTP(w, r)
-			return
-		case errors.Is(err, fs.ErrInvalid):
-			h.writeBadRequest(w)
-			return
-		case err != nil:
-			h.writeServerError(w, err)
-			return
-		}
-
-		content, err := parser.ParseFile(h.contentRoot.FS(), filePath)
+		// Try opening as regular file, then try opening as post.
+		isPost := false
+		file, err := h.contentRoot.Open(name)
 		if err != nil {
-			h.writeServerError(w, err)
+			file, err = h.contentRoot.Open(name + ".md")
+			if err != nil {
+				h.writeNotFound(w, r, name)
+				return
+			}
+			isPost = true
+		}
+		defer func() { _ = file.Close() }()
+
+		info, err := file.Stat()
+		if err != nil {
+			h.writeServerError(w, fmt.Errorf("stat file: %w", err))
 			return
 		}
 
-		err = h.views.CreateAndServe(w, "post",
-			WithData(content),
-			WithDataModified(info.ModTime()),
-			WithLocale(localization.LocaleFromContext(r.Context())),
-			WithPath(chi.RouteContext(r.Context()).RoutePath),
-		)
+		content, err := io.ReadAll(file)
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("serve view: %v", err))
-		}
-	}
-}
-
-func (h *Handlers) FileHandler(root fs.FS) http.HandlerFunc {
-	wrapped := http.FileServerFS(root)
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := fs.Stat(root, r.URL.Path)
-		if errors.Is(err, fs.ErrNotExist) {
-			h.writeNotFound(w, r)
+			h.writeServerError(w, fmt.Errorf("read file: %w", err))
+			return
 		}
 
-		wrapped.ServeHTTP(w, r)
+		if isPost {
+			post, err := parser.ParseContent(content)
+			if err != nil {
+				h.writeServerError(w, fmt.Errorf("parse post: %w", err))
+				return
+			}
+
+			err = h.views.CreateAndServe(w, "post",
+				WithData(post),
+				WithDataModified(info.ModTime()),
+				WithLocale(localization.LocaleFromContext(r.Context())),
+				WithPath(chi.RouteContext(r.Context()).RoutePath),
+			)
+			if err != nil {
+				h.writeServerError(w, fmt.Errorf("serve view: %v", err))
+			}
+		} else {
+			reader := bytes.NewReader(content)
+			http.ServeContent(w, r, info.Name(), info.ModTime(), reader)
+		}
 	}
 }
 
@@ -147,7 +150,25 @@ func (h *Handlers) IndexHandler() http.HandlerFunc {
 
 func (h *Handlers) StaticHandler() http.HandlerFunc {
 	var handler http.Handler
-	handler = h.FileHandler(h.staticRoot.FS())
+
+	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := r.URL.Path
+
+		file, err := h.staticRoot.Open(name)
+		if err != nil {
+			h.writeNotFound(w, r, name)
+			return
+		}
+
+		info, err := file.Stat()
+		if err != nil {
+			h.writeServerError(w, fmt.Errorf("stat file: %w", err))
+			return
+		}
+
+		http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+	})
+
 	handler = http.StripPrefix("/_static/", handler)
 	return handler.ServeHTTP
 }
@@ -156,15 +177,15 @@ func (h *Handlers) writeBadRequest(w http.ResponseWriter) {
 	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }
 
-func (h *Handlers) writeNotFound(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+func (h *Handlers) writeNotFound(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotFound)
 
 	err := h.views.CreateAndServe(w, "404",
 		WithLocale(localization.LocaleFromContext(r.Context())),
-		WithPath(chi.RouteContext(r.Context()).RoutePath),
+		WithPath(name),
 	)
 	if err != nil {
-		h.writeServerError(w, err)
+		log.Printf("Error serving not found response: %v", err)
 	}
 }
 
