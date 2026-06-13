@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,29 +20,61 @@ import (
 )
 
 type Handlers struct {
-	cfg         Config
+	posts       map[string]*posts.Store // store := posts[locale.Tag]
 	views       *ViewFactory
-	ctx         context.Context
 	contentRoot *os.Root
 	staticRoot  *os.Root
 }
 
 func NewHandlers(cfg Config, ctx context.Context, views *ViewFactory) (*Handlers, error) {
-	h := &Handlers{cfg: cfg, ctx: ctx, views: views}
+	h := &Handlers{views: views}
 	var err error
 
 	h.contentRoot, err = os.OpenRoot(config.ContentPath)
 	if err != nil {
-		return nil, fmt.Errorf("open content root: %v", err)
+		return nil, fmt.Errorf("open content root: %w", err)
 	}
 
 	h.staticRoot, err = os.OpenRoot(config.StaticPath)
 	if err != nil {
 		_ = h.contentRoot.Close()
-		return nil, fmt.Errorf("open static root: %v", err)
+		return nil, fmt.Errorf("open static root: %w", err)
 	}
 
+	postsStore, err := newPostsStore(ctx, cfg.Locales)
+	if err != nil {
+		_ = h.contentRoot.Close()
+		_ = h.staticRoot.Close()
+		return nil, fmt.Errorf("open posts store: %w", err)
+	}
+	h.posts = postsStore
+
 	return h, nil
+}
+
+func newPostsStore(ctx context.Context, locales []localization.Locale) (map[string]*posts.Store, error) {
+	// Even with no locales we still need a store, so use the Und locale.
+	if len(locales) == 0 {
+		locales = []localization.Locale{localization.UndLocale}
+	}
+
+	stores := make(map[string]*posts.Store)
+
+	for _, locale := range locales {
+		locPath := config.ContentPath
+		if locale != localization.UndLocale {
+			locPath = filepath.Join(locPath, locale.Tag)
+		}
+
+		store, err := posts.OpenStore(ctx, locPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not load store: %w", err)
+		}
+
+		stores[locale.Tag] = store
+	}
+
+	return stores, nil
 }
 
 func (h *Handlers) Close() error {
@@ -76,62 +108,56 @@ func (h *Handlers) ContentHandler() http.HandlerFunc {
 			return
 		}
 
+		if info.IsDir() {
+			h.writeNotFound(w, r, name)
+			return
+		}
+
+		if !isPost {
+			http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+			return
+		}
+
 		content, err := io.ReadAll(file)
 		if err != nil {
 			h.writeServerError(w, fmt.Errorf("read file: %w", err))
 			return
 		}
 
-		if isPost {
-			post, err := parser.ParseContent(content)
-			if err != nil {
-				h.writeServerError(w, fmt.Errorf("parse post: %w", err))
-				return
-			}
+		post, err := parser.ParseContent(content)
+		if err != nil {
+			h.writeServerError(w, fmt.Errorf("parse post: %w", err))
+			return
+		}
 
-			err = h.views.CreateAndServe(w, "post",
-				WithData(post),
-				WithDataModified(info.ModTime()),
-				WithLocale(localization.LocaleFromContext(r.Context())),
-				WithPath(chi.RouteContext(r.Context()).RoutePath),
-			)
-			if err != nil {
-				h.writeServerError(w, fmt.Errorf("serve view: %v", err))
-			}
-		} else {
-			reader := bytes.NewReader(content)
-			http.ServeContent(w, r, info.Name(), info.ModTime(), reader)
+		err = h.views.CreateAndServe(w, "post",
+			WithData(post),
+			WithDataModified(info.ModTime()),
+			WithLocale(localization.LocaleFromContext(r.Context())),
+			WithPath(chi.RouteContext(r.Context()).RoutePath),
+		)
+		if err != nil {
+			h.writeServerError(w, fmt.Errorf("serve view: %w", err))
 		}
 	}
 }
 
 func (h *Handlers) IndexHandler() http.HandlerFunc {
-	locales := h.cfg.Locales
-
-	// Even with no locales we still need a store, so use the Und locale.
-	if len(locales) == 0 {
-		locales = []localization.Locale{localization.UndLocale}
-	}
-
-	stores := make(map[string]*posts.Store)
-	for _, locale := range locales {
-		locPath := config.LocalizedContentPath(locale)
-		store, err := posts.OpenStore(h.ctx, locPath)
-		if err != nil {
-			log.Fatalf("could not load store: %v", err)
-		}
-		stores[locale.Tag] = store
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
 
+		store, ok := h.posts[locale.Tag]
+		if !ok {
+			// The set of configured locales should never change,
+			// so we should never get this error.
+			h.writeServerError(w, errors.New("posts store missing for locale"))
+		}
+
 		var results []posts.IndexedPost
-		for result := range stores[locale.Tag].Search(query) {
+		for result := range store.Search(query) {
 			if locale != localization.UndLocale {
-				tag := strings.ToLower(locale.Tag)
-				result.Path = "/" + path.Join(tag, result.Path)
+				result.Path = "/" + path.Join(locale.Tag, result.Path)
 			}
 			results = append(results, result)
 		}
@@ -159,10 +185,16 @@ func (h *Handlers) StaticHandler() http.HandlerFunc {
 			h.writeNotFound(w, r, name)
 			return
 		}
+		defer (func() { _ = file.Close() })()
 
 		info, err := file.Stat()
 		if err != nil {
 			h.writeServerError(w, fmt.Errorf("stat file: %w", err))
+			return
+		}
+
+		if info.IsDir() {
+			h.writeNotFound(w, r, name)
 			return
 		}
 
@@ -171,10 +203,6 @@ func (h *Handlers) StaticHandler() http.HandlerFunc {
 
 	handler = http.StripPrefix("/_static/", handler)
 	return handler.ServeHTTP
-}
-
-func (h *Handlers) writeBadRequest(w http.ResponseWriter) {
-	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 }
 
 func (h *Handlers) writeNotFound(w http.ResponseWriter, r *http.Request, name string) {

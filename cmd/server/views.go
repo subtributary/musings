@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/subtributary/musings/internal/config"
@@ -30,7 +29,7 @@ type ViewModel struct {
 
 type View struct {
 	modified time.Time
-	model    *ViewModel
+	model    ViewModel
 	tmpl     templates.Template
 }
 
@@ -61,7 +60,7 @@ func WithData(data any) ViewOption {
 }
 
 func WithDataModified(when time.Time) ViewOption {
-	return func(opts *ViewOptions) { opts.dataModified = &when }
+	return func(opts *ViewOptions) { opts.dataModified = when }
 }
 
 func WithLocale(locale localization.Locale) ViewOption {
@@ -74,7 +73,7 @@ func WithPath(path string) ViewOption {
 
 type ViewOptions struct {
 	data         any
-	dataModified *time.Time
+	dataModified time.Time
 	locale       localization.Locale
 	path         string
 	viewName     string
@@ -127,7 +126,7 @@ func (f *ViewFactory) Create(name string, opts ...ViewOption) (*View, error) {
 	options.viewName = name
 
 	if err := options.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid options: %v", err)
+		return nil, fmt.Errorf("invalid options: %w", err)
 	}
 
 	vm := f.createVM(options)
@@ -147,15 +146,15 @@ func (f *ViewFactory) CreateAndServe(w http.ResponseWriter, name string, opts ..
 	return v.Serve(w)
 }
 
-func (f *ViewFactory) createView(opts *ViewOptions, vm *ViewModel) (*View, error) {
+func (f *ViewFactory) createView(opts *ViewOptions, vm ViewModel) (*View, error) {
 	tmpl, err := f.templateStore.Lookup(opts.viewName)
 	if err != nil {
 		return nil, fmt.Errorf("load template: %w", err)
 	}
 
 	modified := tmpl.LastModified()
-	if opts.dataModified != nil && opts.dataModified.After(modified) {
-		modified = *opts.dataModified
+	if !opts.dataModified.IsZero() && opts.dataModified.After(modified) {
+		modified = opts.dataModified
 	}
 
 	return &View{
@@ -165,26 +164,25 @@ func (f *ViewFactory) createView(opts *ViewOptions, vm *ViewModel) (*View, error
 	}, nil
 }
 
-func (f *ViewFactory) createVM(opts *ViewOptions) *ViewModel {
-	vm := &ViewModel{
+func (f *ViewFactory) createVM(opts *ViewOptions) ViewModel {
+	vm := ViewModel{
 		Translations: f.translations.For(opts.locale),
 		Data:         opts.data,
 	}
 
-	// These defaults work when there are no locales configured.
+	// Defaults for no localization.
 	vm.LocaleOptions = make([]LocaleOption, len(f.locales))
 	vm.Locale = LocaleOption{Locale: opts.locale, IsCurrent: true, URL: "/"}
 	vm.RootURL = "/"
 
-	// If locales are configured, modify root
+	// Localized websites use the locale prefix as the root URL.
 	if opts.locale != localization.UndLocale {
 		vm.RootURL = "/" + opts.locale.Tag + "/"
 	}
 
 	// If locales are configured, set up locales and find current one.
 	for i, locale := range f.locales {
-		tag := strings.ToLower(locale.Tag)
-		localizedPath, _ := url.JoinPath("/", tag, opts.path)
+		localizedPath, _ := url.JoinPath("/", locale.Tag, opts.path)
 		option := LocaleOption{
 			Locale:    locale,
 			IsCurrent: locale == opts.locale,
