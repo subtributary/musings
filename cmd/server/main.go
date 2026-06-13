@@ -26,13 +26,19 @@ func main() {
 		log.Fatalf("Error: %v", err)
 	}
 
+	handlers, err := NewHandlers(cfg, ctx, views)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+	defer (func() { _ = handlers.Close() })()
+
 	router := chi.NewRouter()
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
-	router.Get("/", indexHandler(ctx, views, cfg))
-	router.Get("/_static/*", staticHandler())
-	router.Get("/*", contentHandler(views))
+	router.Get("/", handlers.IndexHandler())
+	router.Get("/_static/*", handlers.StaticHandler())
+	router.Get("/*", handlers.ContentHandler())
 
 	log.Printf("Listening at %s\n", cfg.BindAddress)
 	server := NewServer(cfg.BindAddress, router)

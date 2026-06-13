@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/subtributary/musings/internal/config"
@@ -16,61 +18,102 @@ import (
 	"github.com/subtributary/musings/internal/posts"
 )
 
-func currentRoutePath(r *http.Request) string {
-	return chi.URLParam(r, "*")
+type Handlers struct {
+	cfg         Config
+	views       *ViewFactory
+	ctx         context.Context
+	contentRoot *os.Root
+	staticRoot  *os.Root
 }
 
-func contentHandler(views *ViewFactory) http.HandlerFunc {
-	root, err := os.OpenRoot(config.ContentPath)
+func NewHandlers(cfg Config, ctx context.Context, views *ViewFactory) (*Handlers, error) {
+	h := &Handlers{cfg: cfg, ctx: ctx, views: views}
+	var err error
+
+	h.contentRoot, err = os.OpenRoot(config.ContentPath)
 	if err != nil {
-		log.Fatalf("error opening content root: %v", err)
+		return nil, fmt.Errorf("open content root: %v", err)
 	}
 
-	fallback := http.FileServerFS(root.FS())
+	h.staticRoot, err = os.OpenRoot(config.StaticPath)
+	if err != nil {
+		_ = h.contentRoot.Close()
+		return nil, fmt.Errorf("open static root: %v", err)
+	}
+
+	return h, nil
+}
+
+func (h *Handlers) Close() error {
+	contentErr := h.contentRoot.Close()
+	staticErr := h.staticRoot.Close()
+	return errors.Join(contentErr, staticErr)
+}
+
+func (h *Handlers) ContentHandler() http.HandlerFunc {
+	fileHandler := h.FileHandler(h.contentRoot.FS())
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		filePath := strings.TrimLeft(r.URL.Path, "/") + ".md"
 
-		info, err := fs.Stat(root.FS(), filePath)
-		if errors.Is(err, fs.ErrNotExist) {
-			// It's not a Markdown file, so use the Go file server.
-			fallback.ServeHTTP(w, r)
+		info, err := fs.Stat(h.contentRoot.FS(), filePath)
+		switch {
+		case os.IsNotExist(err):
+			// It's not a Markdown file, so use the file server.
+			fileHandler.ServeHTTP(w, r)
 			return
-		} else if err != nil {
-			writeError(w, err)
+		case errors.Is(err, fs.ErrInvalid):
+			h.writeBadRequest(w)
+			return
+		case err != nil:
+			h.writeServerError(w, err)
 			return
 		}
 
-		content, err := parser.ParseFile(root.FS(), filePath)
+		content, err := parser.ParseFile(h.contentRoot.FS(), filePath)
 		if err != nil {
-			writeError(w, err)
+			h.writeServerError(w, err)
 			return
 		}
 
-		err = views.Serve(w, r, "post",
+		err = h.views.CreateAndServe(w, "post",
 			WithData(content),
 			WithDataModified(info.ModTime()),
+			WithLocale(localization.LocaleFromContext(r.Context())),
+			WithPath(chi.RouteContext(r.Context()).RoutePath),
 		)
 		if err != nil {
-			writeError(w, err)
-			return
+			h.writeServerError(w, fmt.Errorf("serve view: %v", err))
 		}
 	}
 }
 
-func indexHandler(ctx context.Context, views *ViewFactory, cfg Config) http.HandlerFunc {
-	locales := cfg.Locales
+func (h *Handlers) FileHandler(root fs.FS) http.HandlerFunc {
+	wrapped := http.FileServerFS(root)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := fs.Stat(root, r.URL.Path)
+		if errors.Is(err, fs.ErrNotExist) {
+			h.writeNotFound(w, r)
+		}
+
+		wrapped.ServeHTTP(w, r)
+	}
+}
+
+func (h *Handlers) IndexHandler() http.HandlerFunc {
+	locales := h.cfg.Locales
 
 	// Even with no locales we still need a store, so use the Und locale.
-	if len(cfg.Locales) == 0 {
+	if len(locales) == 0 {
 		locales = []localization.Locale{localization.UndLocale}
 	}
 
 	stores := make(map[string]*posts.Store)
 	for _, locale := range locales {
 		locPath := config.LocalizedContentPath(locale)
-		store, err := posts.OpenStore(ctx, locPath)
+		store, err := posts.OpenStore(h.ctx, locPath)
 		if err != nil {
 			log.Fatalf("could not load store: %v", err)
 		}
@@ -90,29 +133,42 @@ func indexHandler(ctx context.Context, views *ViewFactory, cfg Config) http.Hand
 			results = append(results, result)
 		}
 
-		err := views.Serve(w, r, "index",
+		err := h.views.CreateAndServe(w, "index",
 			WithData(results),
+			WithDataModified(time.Now()),
+			WithLocale(localization.LocaleFromContext(r.Context())),
+			WithPath(chi.RouteContext(r.Context()).RoutePath),
 		)
 		if err != nil {
-			writeError(w, err)
-			return
+			h.writeServerError(w, fmt.Errorf("serve view: %v", err))
 		}
 	}
 }
 
-func staticHandler() http.HandlerFunc {
+func (h *Handlers) StaticHandler() http.HandlerFunc {
 	var handler http.Handler
-	handler = http.FileServer(http.Dir(config.StaticPath))
+	handler = h.FileHandler(h.staticRoot.FS())
 	handler = http.StripPrefix("/_static/", handler)
 	return handler.ServeHTTP
 }
 
-func writeError(w http.ResponseWriter, err error) {
-	if errors.Is(err, fs.ErrNotExist) {
-		log.Printf("file not found: %v", err)
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-	} else {
-		log.Printf("server error: %v", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+func (h *Handlers) writeBadRequest(w http.ResponseWriter) {
+	http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+}
+
+func (h *Handlers) writeNotFound(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+
+	err := h.views.CreateAndServe(w, "404",
+		WithLocale(localization.LocaleFromContext(r.Context())),
+		WithPath(chi.RouteContext(r.Context()).RoutePath),
+	)
+	if err != nil {
+		h.writeServerError(w, err)
 	}
+}
+
+func (h *Handlers) writeServerError(w http.ResponseWriter, err error) {
+	log.Printf("server error: %v", err)
+	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
