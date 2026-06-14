@@ -75,7 +75,7 @@ func ContentHandler(views *ViewFactory, contentRoot *os.Root) http.HandlerFunc {
 	}
 }
 
-func IndexHandler(views *ViewFactory, stores map[string]*posts.Store) http.HandlerFunc {
+func IndexHandler(views *ViewFactory, stores map[string]posts.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")

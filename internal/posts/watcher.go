@@ -1,7 +1,8 @@
 package posts
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"io/fs"
 	"log"
 	"os"
@@ -11,82 +12,85 @@ import (
 )
 
 type Watcher struct {
-	root  string
-	dirty func()
+	dirty   func(name string)
+	rootDir string
+	watcher *fsnotify.Watcher
 }
 
-func NewWatcher(root string, dirty func()) Watcher {
-	return Watcher{
-		root:  root,
-		dirty: dirty,
+// NewWatcher creates a new watcher for a directory and its subdirectories.
+// The dirty function is called at Watcher.Start and when a file is modified.
+func NewWatcher(rootDir string, dirty func(name string)) *Watcher {
+	return &Watcher{
+		dirty:   dirty,
+		rootDir: rootDir,
 	}
 }
 
-func (w *Watcher) Start(ctx context.Context) error {
+func (w *Watcher) Start() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		return fmt.Errorf("create watcher: %w", err)
 	}
+	w.watcher = watcher
 
-	if err := addDirectories(watcher, w.root); err != nil {
-		_ = watcher.Close()
-		return err
+	go func() {
+		for {
+			select {
+			case event, ok := <-w.watcher.Events:
+				if !ok {
+					return
+				}
+				w.handleEvent(event)
+			case err, ok := <-w.watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Printf("Error watching %q: %v\n", w.rootDir, err)
+			}
+		}
+	}()
+
+	if err = w.addDirectory(w.rootDir); err != nil {
+		return errors.Join(err, w.watcher.Close())
 	}
-
-	go w.runWatcher(ctx, watcher)
 
 	return nil
 }
 
-func (w *Watcher) runWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
-	defer (func() { _ = watcher.Close() })()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-
-			if event.Has(fsnotify.Create) {
-				w.watchNewDirectory(watcher, event.Name)
-			}
-
-			w.dirty()
-
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-
-			log.Printf("posts watcher: %v", err)
-		}
+func (w *Watcher) handleEvent(event fsnotify.Event) {
+	info, err := os.Stat(event.Name)
+	switch {
+	case err != nil:
+		w.dirty(event.Name)
+	case !info.IsDir():
+		w.dirty(event.Name)
+	case event.Has(fsnotify.Create):
+		_ = w.addDirectory(event.Name)
 	}
 }
 
-func (w *Watcher) watchNewDirectory(watcher *fsnotify.Watcher, path string) {
-	info, err := os.Stat(path)
-	if err != nil || !info.IsDir() {
-		return
+func (w *Watcher) Close() error {
+	if w.watcher != nil {
+		return w.watcher.Close()
 	}
-
-	if err := addDirectories(watcher, path); err != nil {
-		log.Printf("watch new directory %q: %v", path, err)
-	}
+	return nil
 }
 
-func addDirectories(watcher *fsnotify.Watcher, root string) error {
-	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+func (w *Watcher) addDirectory(name string) error {
+	return filepath.WalkDir(name, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		if d.IsDir() {
-			return watcher.Add(path)
+			return w.watcher.Add(path)
 		}
+
+		path, err = filepath.Rel(w.rootDir, path)
+		if err != nil {
+			return fmt.Errorf("relative path: %w", err)
+		}
+		w.dirty(path)
 
 		return nil
 	})

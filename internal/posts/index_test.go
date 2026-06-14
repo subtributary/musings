@@ -23,7 +23,7 @@ func TestIndex_List(t *testing.T) {
 		"ignored":   {Data: []byte("")},
 	}
 
-	index, err := posts.BuildIndex(t.Context(), files)
+	index, err := posts.BuildIndex(files)
 	if err != nil {
 		t.Fatalf("Error building index: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestIndex_Search(t *testing.T) {
 		"ignored":   {Data: []byte("---\npublished: 2025-01-03\n---\n# Jan 3")},
 	}
 
-	index, err := posts.BuildIndex(t.Context(), files)
+	index, err := posts.BuildIndex(files)
 	if err != nil {
 		t.Fatalf("Error building index: %v", err)
 	}
