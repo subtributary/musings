@@ -53,6 +53,17 @@ func (s *Store) Close() (err error) {
 	return err
 }
 
+func (s *Store) Post(path string) (ParsedPost, error) {
+	post, err := s.parser.ParseFile(s.root.FS(), path)
+	if err != nil {
+		return post, err
+	}
+
+	modified, _ := s.modTimes[path]
+	post.Modified = modified
+	return post, nil
+}
+
 func (s *Store) Search(query string) iter.Seq[IndexedPost] {
 	return s.index.Search(query)
 }

@@ -171,7 +171,7 @@ func (s *Index) Upsert(path string, post ParsedPost) {
 	content := s.tokenizer.Tokens(string(post.Content))
 
 	var published string
-	if post.Published != nil {
+	if !post.Published.IsZero() {
 		published = post.Published.Format(time.RFC3339)
 	}
 

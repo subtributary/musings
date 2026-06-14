@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -16,58 +15,25 @@ import (
 	"github.com/subtributary/musings/internal/posts"
 )
 
-func ContentHandler(views *ViewFactory, contentRoot *os.Root) http.HandlerFunc {
-	parser := posts.NewParser()
-
+func ContentHandler(deps Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		name := strings.TrimPrefix(r.URL.Path, "/")
+		locale := localization.LocaleFromContext(r.Context())
+		locPath := chi.RouteContext(r.Context()).RoutePath
+		locPath, _ = strings.CutPrefix(locPath, "/")
 
-		// Try opening as regular file, then try opening as post.
-		isPost := false
-		file, err := contentRoot.Open(name)
+		store := deps.Posts[locale.Tag]
+		post, err := store.Post(locPath + ".md")
+
 		if err != nil {
-			file, err = contentRoot.Open(name + ".md")
-			if err != nil {
-				writeNotFound(w, r, views, name)
-				return
-			}
-			isPost = true
-		}
-		defer func() { _ = file.Close() }()
-
-		info, err := file.Stat()
-		if err != nil {
-			writeServerError(w, fmt.Errorf("stat file: %w", err))
+			serveFile(w, r, deps.Views, deps.ContentRoot, r.URL.Path)
 			return
 		}
 
-		if info.IsDir() {
-			writeNotFound(w, r, views, name)
-			return
-		}
-
-		if !isPost {
-			http.ServeContent(w, r, info.Name(), info.ModTime(), file)
-			return
-		}
-
-		content, err := io.ReadAll(file)
-		if err != nil {
-			writeServerError(w, fmt.Errorf("read file: %w", err))
-			return
-		}
-
-		post, err := parser.ParseContent(content)
-		if err != nil {
-			writeServerError(w, fmt.Errorf("parse post: %w", err))
-			return
-		}
-
-		err = views.CreateAndServe(w, "post",
+		err = deps.Views.CreateAndServe(w, "post",
 			WithData(post),
-			WithDataModified(info.ModTime()),
-			WithLocale(localization.LocaleFromContext(r.Context())),
-			WithPath(chi.RouteContext(r.Context()).RoutePath),
+			WithDataModified(post.Modified),
+			WithLocale(locale),
+			WithPath(locPath),
 		)
 		if err != nil {
 			writeServerError(w, fmt.Errorf("serve view: %w", err))
@@ -75,12 +41,12 @@ func ContentHandler(views *ViewFactory, contentRoot *os.Root) http.HandlerFunc {
 	}
 }
 
-func IndexHandler(views *ViewFactory, stores map[string]posts.Store) http.HandlerFunc {
+func IndexHandler(deps Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
 
-		locStore, ok := stores[locale.Tag]
+		locStore, ok := deps.Posts[locale.Tag]
 		if !ok {
 			// The set of configured locales should never change,
 			// so we should never get this error.
@@ -95,7 +61,7 @@ func IndexHandler(views *ViewFactory, stores map[string]posts.Store) http.Handle
 			results = append(results, result)
 		}
 
-		err := views.CreateAndServe(w, "index",
+		err := deps.Views.CreateAndServe(w, "index",
 			WithData(results),
 			WithDataModified(time.Now()),
 			WithLocale(localization.LocaleFromContext(r.Context())),
@@ -107,38 +73,47 @@ func IndexHandler(views *ViewFactory, stores map[string]posts.Store) http.Handle
 	}
 }
 
-func StaticHandler(views *ViewFactory, staticRoot *os.Root) http.HandlerFunc {
+func StaticHandler(deps Dependencies) http.HandlerFunc {
 	var handler http.Handler
 
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Path
-
-		file, err := staticRoot.Open(name)
-		if err != nil {
-			writeNotFound(w, r, views, name)
-			return
-		}
-		defer (func() { _ = file.Close() })()
-
-		info, err := file.Stat()
-		if err != nil {
-			writeServerError(w, fmt.Errorf("stat file: %w", err))
-			return
-		}
-
-		if info.IsDir() {
-			writeNotFound(w, r, views, name)
-			return
-		}
-
-		http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+		serveFile(w, r, deps.Views, deps.StaticRoot, r.URL.Path)
 	})
 
 	handler = http.StripPrefix("/_static/", handler)
 	return handler.ServeHTTP
 }
 
-func writeNotFound(w http.ResponseWriter, r *http.Request, views *ViewFactory, name string) {
+// serveFile safely serves the file with the name if it exists.
+func serveFile(
+	w http.ResponseWriter, r *http.Request, views *ViewFactory,
+	root *os.Root, name string,
+) {
+	file, err := root.Open(name)
+	if err != nil {
+		writeNotFound(w, r, views, name)
+		return
+	}
+	defer (func() { _ = file.Close() })()
+
+	info, err := file.Stat()
+	if err != nil {
+		writeServerError(w, fmt.Errorf("stat file: %w", err))
+		return
+	}
+
+	if info.IsDir() {
+		writeNotFound(w, r, views, name)
+		return
+	}
+
+	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+}
+
+func writeNotFound(
+	w http.ResponseWriter, r *http.Request, views *ViewFactory,
+	name string,
+) {
 	w.WriteHeader(http.StatusNotFound)
 
 	err := views.CreateAndServe(w, "404",

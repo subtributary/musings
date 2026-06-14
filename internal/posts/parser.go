@@ -20,7 +20,10 @@ type ParsedPost struct {
 	Title     string
 	Content   template.HTML
 	Bylines   []string
-	Published *time.Time
+	Published time.Time
+
+	// Modified is not set by Parser but is set by Store.
+	Modified time.Time
 }
 
 type Parser struct {
@@ -76,18 +79,18 @@ func (s Parser) ParseContent(content []byte) (ParsedPost, error) {
 }
 
 // parsePostTime parses a time string in RFC3339 or a supported format.
-// If the string cannot be parsed, nil is returned.
-func parsePostTime(value string) *time.Time {
+// If the string cannot be parsed, zero time is returned.
+func parsePostTime(value string) time.Time {
 	if t, err := time.Parse(time.RFC3339, value); err == nil {
-		return &t
+		return t
 	}
 	if t, err := time.Parse(time.DateTime, value); err == nil {
-		return &t
+		return t
 	}
 	if t, err := time.Parse(time.DateOnly, value); err == nil {
-		return &t
+		return t
 	}
-	return nil
+	return time.Time{}
 }
 
 type postFrontmatter struct {
