@@ -15,10 +15,14 @@ type CachedStore struct {
 	modTime   time.Time
 }
 
-func NewCachedStore() *CachedStore {
-	return &CachedStore{
+func NewCachedStore(funcs Funcs) *CachedStore {
+	store := &CachedStore{
 		templates: template.New(""),
 	}
+
+	funcs.ApplyTo(store.templates)
+
+	return store
 }
 
 func (s *CachedStore) Load(rootPath string) error {

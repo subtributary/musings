@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/subtributary/musings/internal/localization"
@@ -97,12 +98,16 @@ type ViewFactory struct {
 	translations  localization.Store
 }
 
-func LoadViewFactory(cfg Config) (*ViewFactory, error) {
+func LoadViewFactory(cfg Config, staticRoot *os.Root) (*ViewFactory, error) {
 	f := &ViewFactory{
 		locales: cfg.Locales,
 	}
 
-	templateStore, err := templates.NewStore(TemplatesPath, cfg.LiveTemplates)
+	funcs := templates.Funcs{
+		StaticDir: staticRoot.FS(),
+	}
+
+	templateStore, err := templates.NewStore(TemplatesPath, funcs, cfg.LiveTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("load templates: %w", err)
 	}

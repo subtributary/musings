@@ -64,7 +64,7 @@ func TestCachedStore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := templates.NewCachedStore()
+			store := templates.NewCachedStore(templates.Funcs{})
 			if err := store.LoadFS(files); err != nil {
 				t.Fatalf("LoadFS() error = %v", err)
 			}
@@ -90,7 +90,7 @@ func TestCachedStore_ParseError(t *testing.T) {
 		"bad.gohtml": {Data: []byte(`{{if}}`)},
 	}
 
-	store := templates.NewCachedStore()
+	store := templates.NewCachedStore(templates.Funcs{})
 	if err := store.LoadFS(files); err == nil {
 		t.Fatal("LoadFS() error = nil, want parse error")
 	}

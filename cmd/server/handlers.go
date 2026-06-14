@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,71 +16,7 @@ import (
 	"github.com/subtributary/musings/internal/posts"
 )
 
-type Handlers struct {
-	posts       map[string]*posts.Store // store := posts[locale.Tag]
-	views       *ViewFactory
-	contentRoot *os.Root
-	staticRoot  *os.Root
-}
-
-func NewHandlers(cfg Config, ctx context.Context, views *ViewFactory) (*Handlers, error) {
-	h := &Handlers{views: views}
-	var err error
-
-	h.contentRoot, err = os.OpenRoot(ContentPath)
-	if err != nil {
-		return nil, fmt.Errorf("open content root: %w", err)
-	}
-
-	h.staticRoot, err = os.OpenRoot(StaticPath)
-	if err != nil {
-		_ = h.contentRoot.Close()
-		return nil, fmt.Errorf("open static root: %w", err)
-	}
-
-	postsStore, err := newPostsStore(ctx, cfg.Locales)
-	if err != nil {
-		_ = h.contentRoot.Close()
-		_ = h.staticRoot.Close()
-		return nil, fmt.Errorf("open posts store: %w", err)
-	}
-	h.posts = postsStore
-
-	return h, nil
-}
-
-func newPostsStore(ctx context.Context, locales []localization.Locale) (map[string]*posts.Store, error) {
-	// Even with no locales we still need a store, so use the Und locale.
-	if len(locales) == 0 {
-		locales = []localization.Locale{localization.UndLocale}
-	}
-
-	stores := make(map[string]*posts.Store)
-
-	for _, locale := range locales {
-		locPath := ContentPath
-		if locale != localization.UndLocale {
-			locPath = filepath.Join(locPath, locale.Tag)
-		}
-
-		store, err := posts.OpenStore(ctx, locPath)
-		if err != nil {
-			return nil, fmt.Errorf("could not load store: %w", err)
-		}
-
-		stores[locale.Tag] = store
-	}
-
-	return stores, nil
-}
-
-func (h *Handlers) Close() error {
-	contentErr := h.contentRoot.Close()
-	staticErr := h.staticRoot.Close()
-	return errors.Join(contentErr, staticErr)
-}
-
-func (h *Handlers) ContentHandler() http.HandlerFunc {
+func ContentHandler(views *ViewFactory, contentRoot *os.Root) http.HandlerFunc {
 	parser := posts.NewParser()
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -90,11 +24,11 @@ func (h *Handlers) ContentHandler() http.HandlerFunc {
 
 		// Try opening as regular file, then try opening as post.
 		isPost := false
-		file, err := h.contentRoot.Open(name)
+		file, err := contentRoot.Open(name)
 		if err != nil {
-			file, err = h.contentRoot.Open(name + ".md")
+			file, err = contentRoot.Open(name + ".md")
 			if err != nil {
-				h.writeNotFound(w, r, name)
+				writeNotFound(w, r, views, name)
 				return
 			}
 			isPost = true
@@ -103,12 +37,12 @@ func (h *Handlers) ContentHandler() http.HandlerFunc {
 
 		info, err := file.Stat()
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("stat file: %w", err))
+			writeServerError(w, fmt.Errorf("stat file: %w", err))
 			return
 		}
 
 		if info.IsDir() {
-			h.writeNotFound(w, r, name)
+			writeNotFound(w, r, views, name)
 			return
 		}
 
@@ -119,81 +53,81 @@ func (h *Handlers) ContentHandler() http.HandlerFunc {
 
 		content, err := io.ReadAll(file)
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("read file: %w", err))
+			writeServerError(w, fmt.Errorf("read file: %w", err))
 			return
 		}
 
 		post, err := parser.ParseContent(content)
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("parse post: %w", err))
+			writeServerError(w, fmt.Errorf("parse post: %w", err))
 			return
 		}
 
-		err = h.views.CreateAndServe(w, "post",
+		err = views.CreateAndServe(w, "post",
 			WithData(post),
 			WithDataModified(info.ModTime()),
 			WithLocale(localization.LocaleFromContext(r.Context())),
 			WithPath(chi.RouteContext(r.Context()).RoutePath),
 		)
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("serve view: %w", err))
+			writeServerError(w, fmt.Errorf("serve view: %w", err))
 		}
 	}
 }
 
-func (h *Handlers) IndexHandler() http.HandlerFunc {
+func IndexHandler(views *ViewFactory, stores map[string]*posts.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
 
-		store, ok := h.posts[locale.Tag]
+		locStore, ok := stores[locale.Tag]
 		if !ok {
 			// The set of configured locales should never change,
 			// so we should never get this error.
-			h.writeServerError(w, errors.New("posts store missing for locale"))
+			writeServerError(w, errors.New("posts store missing for locale"))
 		}
 
 		var results []posts.IndexedPost
-		for result := range store.Search(query) {
+		for result := range locStore.Search(query) {
 			if locale != localization.UndLocale {
 				result.Path = "/" + path.Join(locale.Tag, result.Path)
 			}
 			results = append(results, result)
 		}
 
-		err := h.views.CreateAndServe(w, "index",
+		err := views.CreateAndServe(w, "index",
 			WithData(results),
 			WithDataModified(time.Now()),
 			WithLocale(localization.LocaleFromContext(r.Context())),
 			WithPath(chi.RouteContext(r.Context()).RoutePath),
 		)
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("serve view: %v", err))
+			writeServerError(w, fmt.Errorf("serve view: %v", err))
 		}
 	}
 }
 
-func (h *Handlers) StaticHandler() http.HandlerFunc {
+func StaticHandler(views *ViewFactory, staticRoot *os.Root) http.HandlerFunc {
 	var handler http.Handler
 
 	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		name := r.URL.Path
 
-		file, err := h.staticRoot.Open(name)
+		file, err := staticRoot.Open(name)
 		if err != nil {
-			h.writeNotFound(w, r, name)
+			writeNotFound(w, r, views, name)
 			return
 		}
 		defer (func() { _ = file.Close() })()
 
 		info, err := file.Stat()
 		if err != nil {
-			h.writeServerError(w, fmt.Errorf("stat file: %w", err))
+			writeServerError(w, fmt.Errorf("stat file: %w", err))
 			return
 		}
 
 		if info.IsDir() {
-			h.writeNotFound(w, r, name)
+			writeNotFound(w, r, views, name)
 			return
 		}
 
@@ -204,10 +138,10 @@ func (h *Handlers) StaticHandler() http.HandlerFunc {
 	return handler.ServeHTTP
 }
 
-func (h *Handlers) writeNotFound(w http.ResponseWriter, r *http.Request, name string) {
+func writeNotFound(w http.ResponseWriter, r *http.Request, views *ViewFactory, name string) {
 	w.WriteHeader(http.StatusNotFound)
 
-	err := h.views.CreateAndServe(w, "404",
+	err := views.CreateAndServe(w, "404",
 		WithLocale(localization.LocaleFromContext(r.Context())),
 		WithPath(name),
 	)
@@ -216,7 +150,7 @@ func (h *Handlers) writeNotFound(w http.ResponseWriter, r *http.Request, name st
 	}
 }
 
-func (h *Handlers) writeServerError(w http.ResponseWriter, err error) {
+func writeServerError(w http.ResponseWriter, err error) {
 	log.Printf("server error: %v", err)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }

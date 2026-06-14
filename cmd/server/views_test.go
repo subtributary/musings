@@ -149,12 +149,12 @@ func TestViewFactory(t *testing.T) {
 func newViewFactory(t *testing.T, templatesFS fs.FS, locales []localization.Locale) (*ViewFactory, error) {
 	t.Helper()
 
-	templateStore := templates.NewCachedStore()
+	templateStore := templates.NewCachedStore(templates.Funcs{})
 	if err := templateStore.LoadFS(templatesFS); err != nil {
 		return nil, fmt.Errorf("load templates: %w", err)
 	}
 
-	translations := localization.Store{}
+	translations := localization.CachedStore{}
 	for _, locale := range locales {
 		translations[locale.Tag] = localization.Translations{"title": "hello"}
 	}
