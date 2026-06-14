@@ -108,7 +108,7 @@ func LoadViewFactory(cfg Config) (*ViewFactory, error) {
 	}
 	f.templateStore = templateStore
 
-	translations, err := localization.LoadStore(DataPath)
+	translations, err := localization.NewStore(DataPath, cfg.LiveTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("load translations: %w", err)
 	}
@@ -128,7 +128,10 @@ func (f *ViewFactory) Create(name string, opts ...ViewOption) (*View, error) {
 		return nil, fmt.Errorf("invalid options: %w", err)
 	}
 
-	vm := f.createVM(options)
+	vm, err := f.createVM(options)
+	if err != nil {
+		return nil, err
+	}
 	v, err := f.createView(options, vm)
 	if err != nil {
 		return nil, err
@@ -163,11 +166,14 @@ func (f *ViewFactory) createView(opts *ViewOptions, vm ViewModel) (*View, error)
 	}, nil
 }
 
-func (f *ViewFactory) createVM(opts *ViewOptions) ViewModel {
-	vm := ViewModel{
-		Translations: f.translations.For(opts.locale),
-		Data:         opts.data,
+func (f *ViewFactory) createVM(opts *ViewOptions) (ViewModel, error) {
+	vm := ViewModel{Data: opts.data}
+
+	translations, err := f.translations.For(opts.locale)
+	if err != nil {
+		return vm, fmt.Errorf("load translations: %w", err)
 	}
+	vm.Translations = translations
 
 	// Defaults for no localization.
 	vm.LocaleOptions = make([]LocaleOption, len(f.locales))
@@ -194,5 +200,5 @@ func (f *ViewFactory) createVM(opts *ViewOptions) ViewModel {
 		}
 	}
 
-	return vm
+	return vm, nil
 }
