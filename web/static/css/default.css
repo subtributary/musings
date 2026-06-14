@@ -3,7 +3,7 @@
   font-family: "Noto Sans";
   font-style: normal;
   font-weight: 400;
-  src: url("/_static/fonts/fonts/noto-sans-v42-latin-regular.woff2") format("woff2");
+  src: url("/_static/fonts/noto/noto-sans-v42-latin-regular.woff2") format("woff2");
 }
 @font-face {
   font-family: "Noto Sans Arabic";
@@ -2963,7 +2963,7 @@ html {
 }
 
 body {
-  background-image: url("/_static/media/background-light.jpg");
+  background-image: url("/_static/images/background-light.jpg");
   background-position: top;
   background-size: cover;
   min-height: 100%;
@@ -3020,6 +3020,6 @@ article > header > .metadata {
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-image: url("/_static/media/background-dark.jpg");
+    background-image: url("/_static/images/background-dark.jpg");
   }
 }

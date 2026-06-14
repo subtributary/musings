@@ -1,5 +1,6 @@
 {
   "ar": {
+    "Not Found": "غير موجود",
     "Continue reading...": "تابع القراءة...",
     "Search": "بحث",
     "Select language": "اختر اللغة",
@@ -8,6 +9,7 @@
     "published": "نُشر"
   },
   "en": {
+    "Not Found": "Not Found",
     "Continue reading...":  "Continue reading...",
     "Search": "Search",
     "Select language": "Select language",
@@ -16,6 +18,7 @@
     "published": "published"
   },
   "mn-Mong": {
+    "Not Found": "ᠣᠯᠳᠤᠭᠰᠠᠨᠭᠦᠢ",
     "Continue reading...": "ᠦᠷᠭᠦᠯᠵᠢᠯᠡᠨ ᠤᠩᠰᠢᠬᠤ...",
     "Search": "ᠬᠠᠶᠢᠬᠤ",
     "Select language": "ᠬᠡᠯᠡ ᠰᠣᠩᠭᠣᠬᠤ",
