@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/subtributary/musings/internal/config"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/templates"
 )
@@ -103,13 +102,13 @@ func LoadViewFactory(cfg Config) (*ViewFactory, error) {
 		locales: cfg.Locales,
 	}
 
-	templateStore, err := templates.NewStore(config.TemplatesPath, cfg.LiveTemplates)
+	templateStore, err := templates.NewStore(TemplatesPath, cfg.LiveTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("load templates: %w", err)
 	}
 	f.templateStore = templateStore
 
-	translations, err := localization.LoadStore(config.DataPath)
+	translations, err := localization.LoadStore(DataPath)
 	if err != nil {
 		return nil, fmt.Errorf("load translations: %w", err)
 	}

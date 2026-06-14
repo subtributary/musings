@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/subtributary/musings/internal/config"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/posts"
 )
@@ -30,12 +29,12 @@ func NewHandlers(cfg Config, ctx context.Context, views *ViewFactory) (*Handlers
 	h := &Handlers{views: views}
 	var err error
 
-	h.contentRoot, err = os.OpenRoot(config.ContentPath)
+	h.contentRoot, err = os.OpenRoot(ContentPath)
 	if err != nil {
 		return nil, fmt.Errorf("open content root: %w", err)
 	}
 
-	h.staticRoot, err = os.OpenRoot(config.StaticPath)
+	h.staticRoot, err = os.OpenRoot(StaticPath)
 	if err != nil {
 		_ = h.contentRoot.Close()
 		return nil, fmt.Errorf("open static root: %w", err)
@@ -61,7 +60,7 @@ func newPostsStore(ctx context.Context, locales []localization.Locale) (map[stri
 	stores := make(map[string]*posts.Store)
 
 	for _, locale := range locales {
-		locPath := config.ContentPath
+		locPath := ContentPath
 		if locale != localization.UndLocale {
 			locPath = filepath.Join(locPath, locale.Tag)
 		}

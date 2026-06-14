@@ -18,7 +18,8 @@ func main() {
 
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("Error loading config: %v", err)
+		// LoadConfig already prints a friendly error message, so just return.
+		return
 	}
 
 	views, err := LoadViewFactory(cfg)
