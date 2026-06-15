@@ -82,7 +82,7 @@ func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request
 	}
 
 	// Get the locale the user wants and the trailing path.
-	locale, trailing := m.ExtractLocale(reqPath)
+	locale, trailing := ExtractLocale(m.locales, reqPath)
 	if locale == UndLocale {
 		accept := r.Header.Get("Accept-Language")
 		locale = m.matcher.Choose(accept)
@@ -101,27 +101,4 @@ func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request
 	r = r.WithContext(withLocale(r.Context(), locale))
 	chiContext.RoutePath = trailing
 	return r, true
-}
-
-// ExtractLocale parses the locale out of the first segment of a path.
-// It returns the parsed locale and the remaining path after that.
-// If the locale is invalid or missing, then it returns (UndLocale, path).
-func (m *LocalizedRouteMiddleware) ExtractLocale(path string) (Locale, string) {
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
-	}
-
-	segments := strings.SplitN(path, "/", 3)
-
-	// Search for the locale in the supported locales and return it if found.
-	for _, locale := range m.locales {
-		if strings.EqualFold(locale.Tag, segments[1]) {
-			if len(segments) == 3 {
-				return locale, "/" + segments[2]
-			}
-			return locale, "/"
-		}
-	}
-
-	return UndLocale, path
 }

@@ -24,20 +24,14 @@ type ParsedPost struct {
 	Content   template.HTML
 	Bylines   []string
 	Published time.Time
-
-	// Modified is is only set by Parser.ParseFile which uses the return value
-	// of WithModTime's argument. By default it is the time of parsing.
-	//
-	// Store overrides the behavior to use the actual modified time.
-	Modified time.Time
 }
 
 type ParserOption func(p *Parser)
 
-func WithModTime(modTime func(name string) time.Time) ParserOption {
-	return func(p *Parser) {
-		p.modTime = modTime
+type ModTimeFunc func(name string) (time.Time, bool)
 
+func WithModTime(modTime ModTimeFunc) ParserOption {
+	return func(p *Parser) {
 		transformer := versionAssetsTransformer{modTime: modTime}
 		p.docParser.Parser().AddOptions(
 			parser.WithASTTransformers(
@@ -49,7 +43,6 @@ func WithModTime(modTime func(name string) time.Time) ParserOption {
 
 type Parser struct {
 	docParser goldmark.Markdown
-	modTime   func(name string) time.Time
 }
 
 func NewParser(opts ...ParserOption) Parser {
@@ -66,10 +59,6 @@ func NewParser(opts ...ParserOption) Parser {
 		),
 	)
 
-	p.modTime = func(_ string) time.Time {
-		return time.Now()
-	}
-
 	for _, opt := range opts {
 		opt(&p)
 	}
@@ -79,7 +68,7 @@ func NewParser(opts ...ParserOption) Parser {
 
 func (s Parser) ParseFile(dir fs.FS, path string) (ParsedPost, error) {
 	if content, err := fs.ReadFile(dir, path); err != nil {
-		return ParsedPost{}, fmt.Errorf("read file: %v", err)
+		return ParsedPost{}, fmt.Errorf("read file: %w", err)
 	} else {
 		return s.ParseContent(content)
 	}
@@ -213,7 +202,7 @@ func headingPlainText(heading *ast.Heading, source []byte) string {
 // URL whose path has a file extension; relative URLs without an extension are
 // links to posts, which aren't cached, so they're left alone.
 type versionAssetsTransformer struct {
-	modTime func(name string) time.Time
+	modTime ModTimeFunc
 }
 
 func (t *versionAssetsTransformer) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
@@ -255,11 +244,13 @@ func (t *versionAssetsTransformer) versionAssetURL(dest []byte) []byte {
 		return dest
 	}
 
-	modTime := t.modTime(u.Path)
-	version := strconv.FormatInt(modTime.Unix(), 16)
+	modTime, ok := t.modTime(u.Path)
+	if !ok {
+		return dest
+	}
 
 	query := u.Query()
-	query.Set("v", version)
+	query.Set("v", strconv.FormatInt(modTime.Unix(), 16))
 	u.RawQuery = query.Encode()
 
 	return []byte(u.String())

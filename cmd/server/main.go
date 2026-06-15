@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,19 +23,30 @@ func main() {
 		return
 	}
 
-	deps, err := LoadDependencies(cfg)
+	staticRoot, err := os.OpenRoot(StaticPath)
 	if err != nil {
-		log.Fatalf("Error loading dependencies: %v", err)
+		log.Fatalf("Error: open static root: %v", err)
 	}
-	defer (func() { _ = deps.Close() })()
+	defer (func() { _ = staticRoot.Close() })()
+
+	content, err := OpenContent(ContentPath, cfg.Locales)
+	if err != nil {
+		log.Fatalf("Error: load content: %v", err)
+	}
+	defer (func() { _ = content.Close() })()
+
+	responder, err := NewResponder(cfg.LiveTemplates, cfg.Locales, staticRoot)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
 
 	router := chi.NewRouter()
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
-	router.Get("/", IndexHandler(deps))
-	router.Get("/_static/*", StaticHandler(deps))
-	router.Get("/*", ContentHandler(deps))
+	router.Get("/", indexHandler(responder, content))
+	router.Get("/_static/*", staticHandler(responder, staticRoot))
+	router.Get("/*", contentHandler(responder, content))
 
 	server := &http.Server{
 		Addr:    cfg.BindAddress,
@@ -56,13 +68,61 @@ func main() {
 	<-ctx.Done()
 
 	log.Println("Shutting down server...")
-	shutdownCtx, shutdownStop := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownStop()
-	err = server.Shutdown(shutdownCtx)
-	err = errors.Join(err, deps.Close())
+	stopCtx, stopStop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stopStop()
+	err = server.Shutdown(stopCtx) // Shutdown server before closing deps.
+	err = errors.Join(err, content.Close())
+	err = errors.Join(err, staticRoot.Close())
 	if err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
 	}
 
 	log.Printf("Server stopped.")
+}
+
+func contentHandler(response Responder, content *Content) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		reqPath, _ := strings.CutPrefix(r.URL.Path, "/")
+
+		modTime, ok := content.ModTime(reqPath)
+
+		// If ok, it is a regular file and not a post.
+		if ok {
+			response.File(w, r, content.root, reqPath)
+			return
+		}
+
+		modTime, ok = content.ModTime(reqPath + ".md")
+		if !ok {
+			response.NotFound(w, r)
+			return
+		}
+
+		post, err := content.GetPost(reqPath + ".md")
+		if err != nil {
+			response.NotFound(w, r)
+		}
+
+		response.View(w, r, "post", WithData(post, modTime))
+	}
+}
+
+func indexHandler(response Responder, content *Content) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		locale := localization.LocaleFromContext(r.Context())
+		query := r.URL.Query().Get("q")
+		results := content.Search(locale, query)
+		response.View(w, r, "index", WithData(results, time.Now()))
+	}
+}
+
+func staticHandler(response Responder, root *os.Root) http.HandlerFunc {
+	var handler http.Handler
+
+	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response.File(w, r, root, r.URL.Path)
+	})
+
+	handler = http.StripPrefix("/_static/", handler)
+	return handler.ServeHTTP
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/templates"
 )
@@ -33,6 +34,22 @@ type View struct {
 	tmpl     templates.Template
 }
 
+func (v *View) SetData(data any, dataModified time.Time) error {
+	if v.model.Data != nil {
+		// Setting data twice may leave dateModified in a bad state,
+		// so we do not allow it.
+		return errors.New("data has already been set")
+	}
+
+	v.model.Data = data
+
+	if dataModified.After(v.modified) {
+		v.modified = dataModified
+	}
+
+	return nil
+}
+
 func (v *View) Serve(w http.ResponseWriter) error {
 	// Write to a buffer so that errors do not leave it partially written.
 	var buf bytes.Buffer
@@ -51,69 +68,26 @@ func (v *View) Serve(w http.ResponseWriter) error {
 	return nil
 }
 
-type ViewOption func(*ViewOptions)
-
-func WithData(data any) ViewOption {
-	return func(opts *ViewOptions) {
-		opts.data = data
-	}
-}
-
-func WithDataModified(when time.Time) ViewOption {
-	return func(opts *ViewOptions) { opts.dataModified = when }
-}
-
-func WithLocale(locale localization.Locale) ViewOption {
-	return func(opts *ViewOptions) { opts.locale = locale }
-}
-
-func WithPath(path string) ViewOption {
-	return func(opts *ViewOptions) { opts.path = path }
-}
-
-type ViewOptions struct {
-	data         any
-	dataModified time.Time
-	locale       localization.Locale
-	path         string
-	viewName     string
-}
-
-func (opts *ViewOptions) Validate() error {
-	if opts.locale.Tag == "" {
-		return errors.New("locale is not set")
-	}
-	if opts.path == "" {
-		return errors.New("path is not set")
-	}
-	if opts.viewName == "" {
-		return errors.New("view name is not set")
-	}
-	return nil
-}
-
 type ViewFactory struct {
 	locales       []localization.Locale
 	templateStore templates.Store
 	translations  localization.Store
 }
 
-func LoadViewFactory(cfg Config, staticRoot *os.Root) (*ViewFactory, error) {
-	f := &ViewFactory{
-		locales: cfg.Locales,
-	}
+func NewViewFactory(liveTemplates bool, locales []localization.Locale, staticRoot *os.Root) (*ViewFactory, error) {
+	f := &ViewFactory{locales: locales}
 
 	funcs := templates.Funcs{
 		StaticDir: staticRoot.FS(),
 	}
 
-	templateStore, err := templates.NewStore(TemplatesPath, funcs, cfg.LiveTemplates)
+	templateStore, err := templates.NewStore(TemplatesPath, funcs, liveTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("load templates: %w", err)
 	}
 	f.templateStore = templateStore
 
-	translations, err := localization.NewStore(DataPath, cfg.LiveTemplates)
+	translations, err := localization.NewStore(DataPath, liveTemplates)
 	if err != nil {
 		return nil, fmt.Errorf("load translations: %w", err)
 	}
@@ -122,80 +96,58 @@ func LoadViewFactory(cfg Config, staticRoot *os.Root) (*ViewFactory, error) {
 	return f, nil
 }
 
-func (f *ViewFactory) Create(name string, opts ...ViewOption) (*View, error) {
-	options := &ViewOptions{}
-	for _, opt := range opts {
-		opt(options)
-	}
-	options.viewName = name
+func (f *ViewFactory) Create(r *http.Request, name string) (*View, error) {
+	locale := localization.LocaleFromContext(r.Context())
+	reqPath := chi.RouteContext(r.Context()).RoutePath
 
-	if err := options.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid options: %w", err)
-	}
-
-	vm, err := f.createVM(options)
+	view, err := f.createView(name)
 	if err != nil {
-		return nil, err
-	}
-	v, err := f.createView(options, vm)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create view: %w", err)
 	}
 
-	return v, nil
+	vm, err := f.createVM(locale, reqPath)
+	if err != nil {
+		return nil, fmt.Errorf("create view model: %w", err)
+	}
+
+	view.model = vm
+	return view, nil
 }
 
-func (f *ViewFactory) CreateAndServe(w http.ResponseWriter, name string, opts ...ViewOption) error {
-	v, err := f.Create(name, opts...)
-	if err != nil {
-		return fmt.Errorf("create view: %w", err)
-	}
-	return v.Serve(w)
-}
-
-func (f *ViewFactory) createView(opts *ViewOptions, vm ViewModel) (*View, error) {
-	tmpl, err := f.templateStore.Lookup(opts.viewName)
+func (f *ViewFactory) createView(name string) (*View, error) {
+	tmpl, err := f.templateStore.Lookup(name)
 	if err != nil {
 		return nil, fmt.Errorf("load template: %w", err)
 	}
 
-	modified := tmpl.LastModified()
-	if !opts.dataModified.IsZero() && opts.dataModified.After(modified) {
-		modified = opts.dataModified
-	}
-
 	return &View{
-		model:    vm,
-		modified: modified,
+		modified: tmpl.LastModified(),
 		tmpl:     tmpl,
 	}, nil
 }
 
-func (f *ViewFactory) createVM(opts *ViewOptions) (ViewModel, error) {
-	vm := ViewModel{Data: opts.data}
-
-	translations, err := f.translations.For(opts.locale)
+func (f *ViewFactory) createVM(reqLocale localization.Locale, relPath string) (vm ViewModel, err error) {
+	vm.Translations, err = f.translations.For(reqLocale)
 	if err != nil {
 		return vm, fmt.Errorf("load translations: %w", err)
 	}
-	vm.Translations = translations
 
 	// Defaults for no localization.
 	vm.LocaleOptions = make([]LocaleOption, len(f.locales))
-	vm.Locale = LocaleOption{Locale: opts.locale, IsCurrent: true, URL: "/"}
+	vm.Locale = LocaleOption{Locale: reqLocale, IsCurrent: true, URL: "/"}
 	vm.RootURL = "/"
 
 	// Localized websites use the locale prefix as the root URL.
-	if opts.locale != localization.UndLocale {
-		vm.RootURL = "/" + opts.locale.Tag + "/"
+	if reqLocale != localization.UndLocale {
+		vm.RootURL = "/" + reqLocale.Tag + "/"
 	}
 
 	// If locales are configured, set up locales and find current one.
-	for i, locale := range f.locales {
-		localizedPath, _ := url.JoinPath("/", locale.Tag, opts.path)
+	for i, cfgLocale := range f.locales {
+		localizedPath, _ := url.JoinPath("/", cfgLocale.Tag, relPath)
 		option := LocaleOption{
-			Locale:    locale,
-			IsCurrent: locale == opts.locale,
+			Locale:    cfgLocale,
+			IsCurrent: cfgLocale == reqLocale,
 			URL:       localizedPath,
 		}
 
