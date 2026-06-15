@@ -25,7 +25,8 @@ func ContentHandler(deps Dependencies) http.HandlerFunc {
 		post, err := store.Post(locPath + ".md")
 
 		if err != nil {
-			serveFile(w, r, deps.Views, deps.ContentRoot, r.URL.Path)
+			reqPath := path.Join(locale.Tag, locPath)
+			serveFile(w, r, deps.Views, deps.ContentRoot, reqPath)
 			return
 		}
 

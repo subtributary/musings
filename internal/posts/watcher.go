@@ -11,15 +11,17 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+type DirtyFunc func(name string, info fs.FileInfo, isRemoved bool)
+
 type Watcher struct {
-	dirty   func(name string)
+	dirty   DirtyFunc
 	rootDir string
 	watcher *fsnotify.Watcher
 }
 
 // NewWatcher creates a new watcher for a directory and its subdirectories.
 // The dirty function is called at Watcher.Start and when a file is modified.
-func NewWatcher(rootDir string, dirty func(name string)) *Watcher {
+func NewWatcher(rootDir string, dirty DirtyFunc) *Watcher {
 	return &Watcher{
 		dirty:   dirty,
 		rootDir: rootDir,
@@ -58,14 +60,33 @@ func (w *Watcher) Start() error {
 }
 
 func (w *Watcher) handleEvent(event fsnotify.Event) {
+	relPath, err := filepath.Rel(w.rootDir, event.Name)
+	if err != nil {
+		log.Printf("Unexpected: path is not relative to content root: %v", event.Name)
+		return
+	}
+
 	info, err := os.Stat(event.Name)
-	switch {
-	case err != nil:
-		w.dirty(event.Name)
-	case !info.IsDir():
-		w.dirty(event.Name)
-	case event.Has(fsnotify.Create):
-		_ = w.addDirectory(event.Name)
+
+	// If info error, the file or directory was removed.
+	if err != nil {
+		w.dirty(relPath, info, true)
+		return
+	}
+
+	// At this point, we know it's an existing file or directory.
+	// If it's not a directory, the file was created or updated.
+	if !info.IsDir() {
+		w.dirty(relPath, info, false)
+		return
+	}
+
+	// At this point, we know it's an existing directory.
+	// If it was just created, we want to watch it.
+	if event.Has(fsnotify.Create) {
+		if err = w.addDirectory(event.Name); err != nil {
+			log.Printf("Unexpected: cannot watch %q: %v", event.Name, err)
+		}
 	}
 }
 
@@ -86,11 +107,13 @@ func (w *Watcher) addDirectory(name string) error {
 			return w.watcher.Add(path)
 		}
 
-		path, err = filepath.Rel(w.rootDir, path)
+		info, err := d.Info()
 		if err != nil {
-			return fmt.Errorf("relative path: %w", err)
+			return fmt.Errorf("path info: %w", err)
 		}
-		w.dirty(path)
+
+		path, err = filepath.Rel(w.rootDir, path)
+		w.dirty(path, info, false)
 
 		return nil
 	})

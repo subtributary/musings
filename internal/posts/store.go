@@ -8,26 +8,29 @@ import (
 	"log"
 	"os"
 	"path"
+	"sync"
 	"time"
 )
 
 // Store ties all the functionality of the package together.
 type Store struct {
 	index    *Index
-	modTimes map[string]time.Time
+	modTimes sync.Map
 	parser   Parser
 	root     *os.Root
 	watcher  *Watcher
 }
 
-func OpenStore(contentRoot string) (s Store, err error) {
-	s.index = NewIndex()
-	s.modTimes = make(map[string]time.Time)
-	s.parser = NewParser()
+func OpenStore(contentRoot string) (*Store, error) {
+	s := &Store{
+		index: NewIndex(),
+	}
+
+	s.parser = NewParser(WithModTime(s.modTime))
 
 	root, err := os.OpenRoot(contentRoot)
 	if err != nil {
-		return Store{}, fmt.Errorf("open content root: %v", err)
+		return nil, fmt.Errorf("open content root: %v", err)
 	}
 	s.root = root
 
@@ -35,7 +38,7 @@ func OpenStore(contentRoot string) (s Store, err error) {
 	s.watcher = NewWatcher(contentRoot, s.dirty)
 	if err = s.watcher.Start(); err != nil {
 		err = fmt.Errorf("start watching content root: %v", err)
-		return Store{}, errors.Join(err, s.Close())
+		return nil, errors.Join(err, s.Close())
 	}
 
 	return s, nil
@@ -59,8 +62,8 @@ func (s *Store) Post(path string) (ParsedPost, error) {
 		return post, err
 	}
 
-	modified, _ := s.modTimes[path]
-	post.Modified = modified
+	modified, _ := s.modTimes.Load(path)
+	post.Modified = modified.(time.Time)
 	return post, nil
 }
 
@@ -68,12 +71,10 @@ func (s *Store) Search(query string) iter.Seq[IndexedPost] {
 	return s.index.Search(query)
 }
 
-func (s *Store) dirty(name string) {
-	info, err := fs.Stat(s.root.FS(), name)
-
-	if err != nil {
+func (s *Store) dirty(name string, info fs.FileInfo, isRemoved bool) {
+	if isRemoved {
 		s.index.Remove(name)
-		delete(s.modTimes, name)
+		s.modTimes.Delete(name)
 		return
 	}
 
@@ -86,5 +87,10 @@ func (s *Store) dirty(name string) {
 		s.index.Upsert(name, post)
 	}
 
-	s.modTimes[name] = info.ModTime()
+	s.modTimes.Store(name, info.ModTime())
+}
+
+func (s *Store) modTime(name string) time.Time {
+	t, _ := s.modTimes.Load(name)
+	return t.(time.Time)
 }

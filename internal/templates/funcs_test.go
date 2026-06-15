@@ -1,6 +1,7 @@
 package templates_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -37,8 +38,8 @@ func TestFuncs_Versioned(t *testing.T) {
 			t.Fatalf("Execute() error = %v", err)
 		}
 
-		const timestamp = "20060102150405"
-		want := `<script src='/_static/js/script.js?v=` + modTime.Format(timestamp) + `'></script>`
+		version := strconv.FormatInt(modTime.Unix(), 16)
+		want := `<script src='/_static/js/script.js?v=` + version + `'></script>`
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}

@@ -12,7 +12,7 @@ import (
 type Dependencies struct {
 	ContentRoot *os.Root
 	StaticRoot  *os.Root
-	Posts       map[string]posts.Store // store := Posts[locale.Tag]
+	Posts       map[string]*posts.Store // store := Posts[locale.Tag]
 	Views       *ViewFactory
 }
 
@@ -35,7 +35,7 @@ func LoadDependencies(cfg Config) (d Dependencies, err error) {
 		return d, errors.Join(err, d.Close())
 	}
 
-	d.Posts = make(map[string]posts.Store)
+	d.Posts = make(map[string]*posts.Store)
 
 	// Single "und" posts store if localization is disabled.
 	if len(cfg.Locales) == 0 {

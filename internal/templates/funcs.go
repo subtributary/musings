@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -20,8 +21,6 @@ func (f Funcs) ApplyTo(t *template.Template) {
 }
 
 func (f Funcs) versioned(assetURL string) (template.URL, error) {
-	const timestamp = "20060102150405"
-
 	if f.StaticDir == nil {
 		return "", errors.New("static dir is not defined")
 	}
@@ -44,7 +43,7 @@ func (f Funcs) versioned(assetURL string) (template.URL, error) {
 	}
 
 	query := parsedURL.Query()
-	query.Set("v", modified.UTC().Format(timestamp))
+	query.Set("v", strconv.FormatInt(modified.Unix(), 16))
 	parsedURL.RawQuery = query.Encode()
 
 	return template.URL(parsedURL.String()), nil
