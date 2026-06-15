@@ -16,28 +16,48 @@ import (
 )
 
 func ContentHandler(deps Dependencies) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		locale := localization.LocaleFromContext(r.Context())
-		locPath := chi.RouteContext(r.Context()).RoutePath
-		locPath, _ = strings.CutPrefix(locPath, "/")
+	servePost := func(w http.ResponseWriter, r *http.Request, locale localization.Locale, reqPath string) bool {
+		store, ok := deps.Posts[locale.Tag]
+		if !ok {
+			return false
+		}
 
-		store := deps.Posts[locale.Tag]
-		post, err := store.Post(locPath + ".md")
-
+		post, err := store.Post(reqPath + ".md")
 		if err != nil {
-			reqPath := path.Join(locale.Tag, locPath)
-			serveFile(w, r, deps.Views, deps.ContentRoot, reqPath)
-			return
+			return false
 		}
 
 		err = deps.Views.CreateAndServe(w, "post",
 			WithData(post),
 			WithDataModified(post.Modified),
 			WithLocale(locale),
-			WithPath(locPath),
+			WithPath(reqPath),
 		)
 		if err != nil {
 			writeServerError(w, fmt.Errorf("serve view: %w", err))
+		}
+
+		return true
+	}
+
+	serveContentFile := func(w http.ResponseWriter, r *http.Request, locale localization.Locale, reqPath string) {
+		if locale != localization.UndLocale {
+			reqPath = path.Join(locale.Tag, reqPath)
+		}
+		serveFile(w, r, deps.Views, deps.ContentRoot, reqPath)
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		locale := localization.LocaleFromContext(r.Context())
+		
+		reqPath := chi.RouteContext(r.Context()).RoutePath
+		if reqPath == "" {
+			reqPath = r.URL.Path
+		}
+		reqPath, _ = strings.CutPrefix(reqPath, "/")
+
+		if !servePost(w, r, locale, reqPath) {
+			serveContentFile(w, r, locale, reqPath)
 		}
 	}
 }

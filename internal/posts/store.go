@@ -62,8 +62,7 @@ func (s *Store) Post(path string) (ParsedPost, error) {
 		return post, err
 	}
 
-	modified, _ := s.modTimes.Load(path)
-	post.Modified = modified.(time.Time)
+	post.Modified = s.modTime(path)
 	return post, nil
 }
 
@@ -91,6 +90,8 @@ func (s *Store) dirty(name string, info fs.FileInfo, isRemoved bool) {
 }
 
 func (s *Store) modTime(name string) time.Time {
-	t, _ := s.modTimes.Load(name)
-	return t.(time.Time)
+	if t, ok := s.modTimes.Load(name); ok {
+		return t.(time.Time)
+	}
+	return time.Time{}
 }
