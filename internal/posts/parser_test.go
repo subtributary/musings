@@ -92,11 +92,7 @@ func TestParseContent(t *testing.T) {
 				t.Errorf("post.Bylines: got %v, want %v", post.Bylines, tt.want.Bylines)
 			}
 
-			if post.Published == nil || tt.want.Published == nil {
-				if post.Published != tt.want.Published {
-					t.Errorf("post.Published = %v, want %v", post.Published, tt.want.Published)
-				}
-			} else if !post.Published.Equal(*tt.want.Published) {
+			if !post.Published.Equal(tt.want.Published) {
 				t.Errorf("post.Published = %v, want %v", post.Published, tt.want.Published)
 			}
 
@@ -113,22 +109,22 @@ func TestParseContent_FrontmatterDates(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
-		want  *time.Time
+		want  time.Time
 	}{
 		{
 			name:  "empty",
 			input: "",
-			want:  nil,
+			want:  time.Time{},
 		},
 		{
 			name:  "invalid time",
 			input: "apple",
-			want:  nil,
+			want:  time.Time{},
 		},
 		{
 			name:  "unsupported format",
 			input: "2026-04-30T12:00",
-			want:  nil,
+			want:  time.Time{},
 		},
 		{
 			name:  "support yyyy-MM-dd",
@@ -160,20 +156,16 @@ func TestParseContent_FrontmatterDates(t *testing.T) {
 				t.Fatalf("ParseContent(%q): unexpected error: %v", content, err)
 			}
 
-			if tt.want == nil && post.Published != nil {
-				t.Errorf("post.Published: got %v, want nil", post.Published)
-			} else if tt.want != nil && post.Published == nil {
-				t.Errorf("post.Published: got %v, want nil", post.Published)
-			} else if tt.want != nil && *post.Published != *tt.want {
+			if !post.Published.Equal(tt.want) {
 				t.Errorf("post.Published: got %v, want %v", post.Published, tt.want)
 			}
 		})
 	}
 }
 
-func parseTime(format string, value string) *time.Time {
+func parseTime(format string, value string) time.Time {
 	if t, err := time.Parse(format, value); err == nil {
-		return &t
+		return t
 	}
-	return nil
+	return time.Time{}
 }
