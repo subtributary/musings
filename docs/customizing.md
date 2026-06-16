@@ -84,10 +84,9 @@ The structure of the `Data` property depends on the view.
 ###  index.gohtml
 
 The "index.gohtml" file is the template for the website index, or home page.
+It is served at "/" (or "/q=" when searching).
 
-The index is served at "/" (or "/q=" when searching).
-
-The structure of the  view model's `Data` property for the index is:
+The view model's `Data` property is a `SearchResult` with this structure:
 
 ```go
 type IndexedPost struct {
@@ -95,6 +94,11 @@ type IndexedPost struct {
     Bylines   []string
     Published *time.Time
     Title     string
+}
+
+type SearchResults struct {
+    Query   string
+    Results []posts.IndexedPost
 }
 ```
 
@@ -113,8 +117,9 @@ The "post.gohtml" file is the template for posts in "content/".
 (See [content.md](content.md) for how to create the content.)
 
 Posts are served at routes that match the structure of the "content" directory.
+For example, "content/en/hello.md" is served at "/en/hello.md".
 
-The structure of the view model's `Data` property for the post is:
+The view model's `Data` property is a `ParsedPost` with this structure:
 
 ```go
 type ParsedPost struct {
@@ -128,7 +133,7 @@ type ParsedPost struct {
 ### partials
 
 Partial templates to support the main templates are in the "templates/partials" directory.
-A partial's name is its  file name without the extension and with "partials/" prefixed;
+A partial's name is its file name without the extension and with "partials/" prefixed;
 for example, "/templates/partials/head.gohtml" is named "partials/head".
 The name is used to include the partial in another template.
 

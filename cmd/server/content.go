@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"iter"
 	"log"
 	"os"
 	"path"
@@ -93,12 +92,22 @@ func (c *Content) ModTime(name string) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func (c *Content) Search(locale localization.Locale, query string) iter.Seq[posts.IndexedPost] {
-	if index, ok := c.indexes[locale.Tag]; ok {
-		return index.Search(query)
+type SearchResults struct {
+	Query   string
+	Results []posts.IndexedPost
+}
+
+func (c *Content) Search(locale localization.Locale, query string) SearchResults {
+	index, ok := c.indexes[locale.Tag]
+	if !ok {
+		log.Printf("Unexpected: missing localized index: %s", locale.Tag)
+		return SearchResults{}
 	}
-	log.Printf("Unexpected: missing localized index: %s", locale.Tag)
-	return slices.Values([]posts.IndexedPost{})
+
+	return SearchResults{
+		Query:   query,
+		Results: slices.Collect(index.Search(query)),
+	}
 }
 
 // dirty is called by the monitor when a content file or directory changes.

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -112,7 +111,7 @@ func indexHandler(response Responder, content *Content) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
-		results := slices.Collect(content.Search(locale, query))
+		results := content.Search(locale, query)
 		response.View(w, r, "index", WithData(results, time.Now()))
 	}
 }

@@ -4,14 +4,18 @@
 <body>
 {{template "partials/header" .}}
 
+<script>
+    document.getElementById("search").value = {{.Data.Query}}
+</script>
+
 <main>
-    {{if eq (len .Data) 0}}
+    {{if eq (len .Data.Results) 0}}
         <article>
             {{.Translations.Get "Zero matches"}}
         </article>
     {{end}}
 
-    {{range .Data}}
+    {{range .Data.Results}}
         <article>
             <header>
                 <div class="title">{{.Title}}</div>
