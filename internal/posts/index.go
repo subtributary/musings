@@ -2,7 +2,6 @@ package posts
 
 import (
 	"cmp"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -59,20 +58,16 @@ func NewIndex() *Index {
 }
 
 // BuildIndex builds an entirely new index.
-func BuildIndex(ctx context.Context, contentRoot fs.FS) (*Index, error) {
+func BuildIndex(contentRoot fs.FS) (*Index, error) {
 	index := NewIndex()
 
-	parser := NewParser()
+	// Ignore modtime of linked assets because it isn't needed for indexing.
+	modTime := func(string) (_ time.Time, _ bool) { return }
+	parser := NewParser(modTime)
 
 	err := fs.WalkDir(contentRoot, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
 		}
 
 		if !d.Type().IsRegular() || path.Ext(d.Name()) != ".md" {
@@ -84,7 +79,7 @@ func BuildIndex(ctx context.Context, contentRoot fs.FS) (*Index, error) {
 			return fmt.Errorf("parse post %q: %w", filePath, err)
 		}
 
-		index.upsert(filePath, post)
+		index.Upsert(filePath, post)
 
 		return nil
 	})
@@ -129,6 +124,11 @@ func (s *Index) List() iter.Seq[IndexedPost] {
 	}
 }
 
+// Remove removes a post from the index.
+func (s *Index) Remove(path string) {
+	s.corpus.Remove(path)
+}
+
 // Search returns the posts matching the query,
 // sorted by match score with the best match first.
 // Posts with publication dates in the future are omitted.
@@ -166,14 +166,14 @@ func (s *Index) Search(query string) iter.Seq[IndexedPost] {
 	}
 }
 
-// upsert adds a post to the index.
-func (s *Index) upsert(path string, post ParsedPost) {
+// Upsert adds a post to the index.
+func (s *Index) Upsert(path string, post ParsedPost) {
 	routePath := strings.TrimSuffix(path, ".md")
 	title := s.tokenizer.Tokens(post.Title)
 	content := s.tokenizer.Tokens(string(post.Content))
 
 	var published string
-	if post.Published != nil {
+	if !post.Published.IsZero() {
 		published = post.Published.Format(time.RFC3339)
 	}
 

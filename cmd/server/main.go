@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,45 +17,112 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
 	cfg, err := LoadConfig()
 	if err != nil {
 		// LoadConfig already prints a friendly error message, so just return.
 		return
 	}
 
-	views, err := LoadViewFactory(cfg)
+	staticRoot, err := os.OpenRoot(StaticPath)
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatalf("Error: open static root: %v", err)
 	}
+	defer (func() { _ = staticRoot.Close() })()
 
-	handlers, err := NewHandlers(cfg, ctx, views)
+	content, err := OpenContent(ContentPath, cfg.Locales)
+	if err != nil {
+		log.Fatalf("Error: load content: %v", err)
+	}
+	defer (func() { _ = content.Close() })()
+
+	responder, err := NewResponder(cfg.LiveTemplates, cfg.Locales, staticRoot)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}
-	defer (func() { _ = handlers.Close() })()
 
 	router := chi.NewRouter()
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
-	router.Get("/", handlers.IndexHandler())
-	router.Get("/_static/*", handlers.StaticHandler())
-	router.Get("/*", handlers.ContentHandler())
+	router.Get("/", indexHandler(responder, content))
+	router.Get("/_static/*", staticHandler(responder, staticRoot))
+	router.Get("/*", contentHandler(responder, content))
+
+	server := &http.Server{
+		Addr:    cfg.BindAddress,
+		Handler: router,
+	}
+
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Error from server: %v", err)
+		}
+	}()
 
 	log.Printf("Listening at %s\n", cfg.BindAddress)
-	server := NewServer(cfg.BindAddress, router)
-	server.Start()
 
+	// Listen for CTRL+C or other interrupt.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	<-ctx.Done()
-	stop()
 
 	log.Println("Shutting down server...")
-	if err := server.Shutdown(); err != nil {
+	stopCtx, stopStop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stopStop()
+	err = server.Shutdown(stopCtx) // Shutdown server before closing deps.
+	err = errors.Join(err, content.Close())
+	err = errors.Join(err, staticRoot.Close())
+	if err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
 	}
 
-	log.Println("Server stopped.")
+	log.Printf("Server stopped.")
+}
+
+func contentHandler(response Responder, content *Content) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		reqPath, _ := strings.CutPrefix(r.URL.Path, "/")
+
+		modTime, ok := content.ModTime(reqPath)
+
+		// If ok, it is a regular file and not a post.
+		if ok {
+			response.File(w, r, content.root, reqPath)
+			return
+		}
+
+		modTime, ok = content.ModTime(reqPath + ".md")
+		if !ok {
+			response.NotFound(w, r)
+			return
+		}
+
+		post, err := content.GetPost(reqPath + ".md")
+		if err != nil {
+			response.NotFound(w, r)
+		}
+
+		response.View(w, r, "post", WithData(post, modTime))
+	}
+}
+
+func indexHandler(response Responder, content *Content) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		locale := localization.LocaleFromContext(r.Context())
+		query := r.URL.Query().Get("q")
+		results := content.Search(locale, query)
+		response.View(w, r, "index", WithData(results, time.Now()))
+	}
+}
+
+func staticHandler(response Responder, root *os.Root) http.HandlerFunc {
+	var handler http.Handler
+
+	handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response.File(w, r, root, r.URL.Path)
+	})
+
+	handler = http.StripPrefix("/_static/", handler)
+	return handler.ServeHTTP
 }

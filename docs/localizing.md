@@ -64,6 +64,12 @@ For the configuration example above, this is how that looks:
 * `content/ar/`
 * `content/en/`
 
+Asset files that are shared between locales can be stored in a "_shared" subdirectory.
+Shared files are served at "/_shared/", but relative paths can be used in markdown files.
+
+* `content/_shared/logo.png`
+
+In "content/en/example.md", this can be included with `![](/_shared/logo.png)` or `![](../_shared/logo.png)`.
 
 ## String localization
 

@@ -3,6 +3,7 @@ package localization
 import (
 	"context"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -23,7 +24,7 @@ func withLocale(ctx context.Context, locale Locale) context.Context {
 	return context.WithValue(ctx, localeKey{}, locale)
 }
 
-// LocalizedRoute enforces localized routes if localization is enabled.
+// LocalizedRoute enforces localized routes only if localization is enabled.
 // See LocalizedRouteMiddleware for details of localized route handling.
 func LocalizedRoute(locales []Locale) func(next http.Handler) http.Handler {
 	// If localization is disabled, do nothing.
@@ -47,8 +48,8 @@ func LocalizedRoute(locales []Locale) func(next http.Handler) http.Handler {
 }
 
 // LocalizedRouteMiddleware enforces URLs that have the locale as the first
-// path segment. The locale can be read via LocaleFromContext, and the
-// context's RoutePath is updated to be the path after the locale.
+// path segment. The locale can be read via LocaleFromContext, and the chi
+// context's RoutePath is updated to be the trailing path prefixed with "/".
 //
 // If the URL is not localized, then the response is a redirect to a localized
 // URL that has a configured locale that is best suited per the request.
@@ -70,27 +71,22 @@ func NewLocalizedRouteMiddleware(locales []Locale) *LocalizedRouteMiddleware {
 // whether the next middleware should be called.
 func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request) (*http.Request, bool) {
 	chiContext := chi.RouteContext(r.Context())
-	reqPath := r.URL.Path
-
-	if !strings.HasPrefix(reqPath, "/") {
-		reqPath = "/" + reqPath
-	}
 
 	// Reserved and system paths are not localized.
-	if strings.HasPrefix(reqPath, "/_") {
+	if strings.HasPrefix(r.URL.Path, "/_") {
 		return r, true
 	}
 
 	// Get the locale the user wants and the trailing path.
-	locale, trailing := m.ExtractLocale(reqPath)
+	locale, trailing := ExtractLocale(m.locales, r.URL.Path)
 	if locale == UndLocale {
 		accept := r.Header.Get("Accept-Language")
 		locale = m.matcher.Choose(accept)
 	}
 
 	// Ensure the URL is the canonical localized URL.
-	locPath := "/" + locale.Tag + trailing
-	if reqPath != locPath {
+	locPath := "/" + path.Join(locale.Tag, trailing)
+	if r.URL.Path != locPath {
 		redirectURL := *r.URL
 		redirectURL.Path = locPath
 		http.Redirect(w, r, redirectURL.String(), http.StatusFound)
@@ -101,27 +97,4 @@ func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request
 	r = r.WithContext(withLocale(r.Context(), locale))
 	chiContext.RoutePath = trailing
 	return r, true
-}
-
-// ExtractLocale parses the locale out of the first segment of a path.
-// It returns the parsed locale and the remaining path after that.
-// If the locale is invalid or missing, then it returns (UndLocale, path).
-func (m *LocalizedRouteMiddleware) ExtractLocale(path string) (Locale, string) {
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
-	}
-
-	segments := strings.SplitN(path, "/", 3)
-
-	// Search for the locale in the supported locales and return it if found.
-	for _, locale := range m.locales {
-		if strings.EqualFold(locale.Tag, segments[1]) {
-			if len(segments) == 3 {
-				return locale, "/" + segments[2]
-			}
-			return locale, "/"
-		}
-	}
-
-	return UndLocale, path
 }
