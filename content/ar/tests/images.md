@@ -1,22 +1,23 @@
 ---
 bylines:
-  - by Nathan Belue
+  - بقلم Nathan Belue
+  - ترجمة Codex
 published: 2026-06-15
 ---
-# Images
+# الصور
 
-This image is in the same directory:
+هذه الصورة موجودة في الدليل نفسه:
 
-![Subtributary Logo](logo.svg)
+![شعار Subtributary](logo.svg)
 
-This image is in the `_shared` directory and referenced with a relative path:
+هذه الصورة موجودة في دليل `_shared` ويُشار إليها بمسار نسبي:
 
-![Subtributary Logo](../../_shared/logo.svg)
+![شعار Subtributary](../../_shared/logo.svg)
 
-This image is in the `_shared` directory and referenced with an absolute URL:
+هذه الصورة موجودة في دليل `_shared` ويُشار إليها برابط مطلق:
 
-![Subtributary Logo](/_shared/logo.svg)
+![شعار Subtributary](/_shared/logo.svg)
 
-This image is an external URL:
+هذه الصورة رابط خارجي:
 
-![Subtributary Logo](https://avatars.githubusercontent.com/u/263285758?s=200&v=4)
+![شعار Subtributary](https://avatars.githubusercontent.com/u/263285758?s=200&v=4)

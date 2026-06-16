@@ -1,22 +1,23 @@
 ---
 bylines:
-  - by Nathan Belue
+  - ᠪᠢᠴᠢᠭᠰᠡᠨ Nathan Belue
+  - ᠣᠷᠴᠢᠭᠤᠯᠤᠭᠰᠠᠨ Codex
 published: 2026-06-15
 ---
-# Images
+# ᠵᠢᠷᠤᠭ ᠤᠳ
 
-This image is in the same directory:
+ᠡᠨᠡ ᠵᠢᠷᠤᠭ ᠨᠢ ᠠᠳᠠᠯᠢ ᠯᠠᠪᠯᠠᠬᠤ ᠳᠤ ᠪᠠᠶᠢᠨ᠎ᠠ:
 
-![Subtributary Logo](logo.svg)
+![Subtributary ᠯᠣᠭᠣ](logo.svg)
 
-This image is in the `_shared` directory and referenced with a relative path:
+ᠡᠨᠡ ᠵᠢᠷᠤᠭ ᠨᠢ `_shared` ᠯᠠᠪᠯᠠᠬᠤ ᠳᠤ ᠪᠠᠶᠢᠵᠤ᠂ ᠬᠠᠷᠢᠴᠠᠩᠭᠤᠢ ᠵᠠᠮ ᠢᠶᠠᠷ ᠵᠢᠭᠠᠭᠳᠠᠭᠰᠠᠨ:
 
-![Subtributary Logo](../../_shared/logo.svg)
+![Subtributary ᠯᠣᠭᠣ](../../_shared/logo.svg)
 
-This image is in the `_shared` directory and referenced with an absolute URL:
+ᠡᠨᠡ ᠵᠢᠷᠤᠭ ᠨᠢ `_shared` ᠯᠠᠪᠯᠠᠬᠤ ᠳᠤ ᠪᠠᠶᠢᠵᠤ᠂ ᠦᠨᠡᠮᠯᠡᠬᠦᠢ URL ᠢᠶᠠᠷ ᠵᠢᠭᠠᠭᠳᠠᠭᠰᠠᠨ:
 
-![Subtributary Logo](/_shared/logo.svg)
+![Subtributary ᠯᠣᠭᠣ](/_shared/logo.svg)
 
-This image is an external URL:
+ᠡᠨᠡ ᠵᠢᠷᠤᠭ ᠨᠢ ᠭᠠᠳᠠᠭᠠᠳᠤ URL ᠶᠤᠮ:
 
-![Subtributary Logo](https://avatars.githubusercontent.com/u/263285758?s=200&v=4)
+![Subtributary ᠯᠣᠭᠣ](https://avatars.githubusercontent.com/u/263285758?s=200&v=4)
