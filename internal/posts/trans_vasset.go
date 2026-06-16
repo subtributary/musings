@@ -1,7 +1,6 @@
 package posts
 
 import (
-	"log"
 	"net/url"
 	"path"
 	"strconv"
@@ -47,7 +46,7 @@ func (t *versionAssetsTransformer) Transform(doc *ast.Document, _ text.Reader, p
 
 	// We should never get an error since we never return one in the walker.
 	if err != nil {
-		log.Fatalf("Unexpected error walking AST: %v", err)
+		panic("Unexpected: error walking AST:" + err.Error())
 	}
 }
 
