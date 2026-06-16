@@ -89,7 +89,7 @@ func (c *Content) ModTime(name string) (time.Time, bool) {
 	if t, ok := c.modTimes.Load(name); ok {
 		return t.(time.Time), true
 	}
-	
+
 	return time.Time{}, false
 }
 
