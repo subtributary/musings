@@ -15,10 +15,11 @@ import (
 )
 
 type ParsedPost struct {
-	Title     string
-	Content   template.HTML
 	Bylines   []string
+	Content   template.HTML
 	Published time.Time
+	Summary   string
+	Title     string
 }
 
 type Parser struct {
@@ -39,6 +40,7 @@ func NewParser(modTime ModTimeFunc) Parser {
 		goldmark.WithParserOptions(
 			parser.WithASTTransformers(
 				util.Prioritized(&removeH1Transformer{}, 0),
+				util.Prioritized(&summaryTransformer{}, 50),
 				util.Prioritized(&versionAssetsTransformer{modTime: modTime}, 100),
 			),
 		),
@@ -74,11 +76,14 @@ func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
 		return ParsedPost{}, fmt.Errorf("parse frontmatter: %w", err)
 	}
 
+	summary := getSummary(ctx)
+
 	return ParsedPost{
-		Title:     getTitle(ctx),
-		Content:   template.HTML(parsedContent),
 		Bylines:   fm.Bylines,
+		Content:   template.HTML(parsedContent),
 		Published: parsePostTime(fm.Published),
+		Summary:   summary,
+		Title:     getTitle(ctx),
 	}, nil
 }
 
