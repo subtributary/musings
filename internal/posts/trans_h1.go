@@ -83,7 +83,7 @@ func headingPlainText(heading *ast.Heading, source []byte) string {
 
 	// We should never get an error since we never return one in the walker.
 	if err != nil {
-		log.Fatalf("Unexpected error walking AST: %v", err)
+		panic("Unexpected: error walking AST:" + err.Error())
 	}
 
 	return buf.String()

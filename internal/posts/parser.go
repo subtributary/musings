@@ -15,10 +15,11 @@ import (
 )
 
 type ParsedPost struct {
-	Title     string
-	Content   template.HTML
 	Bylines   []string
+	Content   template.HTML
 	Published time.Time
+	Summary   string
+	Title     string
 }
 
 type Parser struct {
@@ -39,6 +40,7 @@ func NewParser(modTime ModTimeFunc) Parser {
 		goldmark.WithParserOptions(
 			parser.WithASTTransformers(
 				util.Prioritized(&removeH1Transformer{}, 0),
+				util.Prioritized(&summaryTransformer{}, 50),
 				util.Prioritized(&versionAssetsTransformer{modTime: modTime}, 100),
 			),
 		),
@@ -74,32 +76,39 @@ func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
 		return ParsedPost{}, fmt.Errorf("parse frontmatter: %w", err)
 	}
 
-	return ParsedPost{
-		Title:     getTitle(ctx),
-		Content:   template.HTML(parsedContent),
-		Bylines:   fm.Bylines,
-		Published: parsePostTime(fm.Published),
-	}, nil
-}
+	summary := getSummary(ctx)
+	if fm.Summary != "" {
+		summary = fm.Summary
+	}
 
-// parsePostTime parses a time string in RFC3339 or a supported format.
-// If the string cannot be parsed, zero time is returned.
-func parsePostTime(value string) time.Time {
-	if t, err := time.Parse(time.RFC3339, value); err == nil {
-		return t
-	}
-	if t, err := time.Parse(time.DateTime, value); err == nil {
-		return t
-	}
-	if t, err := time.Parse(time.DateOnly, value); err == nil {
-		return t
-	}
-	return time.Time{}
+	return ParsedPost{
+		Bylines:   fm.Bylines,
+		Content:   template.HTML(parsedContent),
+		Published: fm.PublishedTime(),
+		Summary:   summary,
+		Title:     getTitle(ctx),
+	}, nil
 }
 
 type postFrontmatter struct {
 	Bylines   []string
 	Published string
+	Summary   string
+}
+
+// PublishedTime parses a time string in RFC3339 or a supported format.
+// If Published cannot be parsed, zero time is returned.
+func (fm *postFrontmatter) PublishedTime() time.Time {
+	if t, err := time.Parse(time.RFC3339, fm.Published); err == nil {
+		return t
+	}
+	if t, err := time.Parse(time.DateTime, fm.Published); err == nil {
+		return t
+	}
+	if t, err := time.Parse(time.DateOnly, fm.Published); err == nil {
+		return t
+	}
+	return time.Time{}
 }
 
 func parseFrontmatter(context parser.Context) (result postFrontmatter, err error) {

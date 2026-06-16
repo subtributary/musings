@@ -27,12 +27,13 @@ Musings adds plugin support and metadata to the format.
 
 ### Metadata
 
-Metadata such as bylines and publication date can be added in a frontmatter block.
+Metadata can be added in a frontmatter block.
 
 ```markdown
 ---
 bylines: [by Nathan Belue]
 published: 2026-04-30
+summary: Example summary text.
 ---
 # Title
 
@@ -45,6 +46,10 @@ which may include information such as the author, translator, and editor.
 
 The `published` field is the publication date.
 It must be in RFC 3339 format, "yyyy-MM-dd HH:mm:ss" format, or "yyyy-MM-dd" format.
+
+The `summary` field is a summary of the content.
+The default value is the first non-empty paragraph of the document.
+(Stand-alone images are considered paragraphs, and their alt text can be used.)
 
 By default, content is sorted by publication date on the index.
 If a publication date is omitted for a document, that document is sorted above others that have a publication date.

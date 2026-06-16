@@ -27,13 +27,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error: open static root: %v", err)
 	}
-	defer (func() { _ = staticRoot.Close() })()
 
 	content, err := OpenContent(ContentPath, cfg.Locales)
 	if err != nil {
 		log.Fatalf("Error: load content: %v", err)
 	}
-	defer (func() { _ = content.Close() })()
 
 	responder, err := NewResponder(cfg.LiveTemplates, cfg.Locales, staticRoot)
 	if err != nil {
@@ -48,15 +46,12 @@ func main() {
 	router.Get("/_static/*", staticHandler(responder, staticRoot))
 	router.Get("/*", contentHandler(responder, content))
 
-	server := &http.Server{
-		Addr:    cfg.BindAddress,
-		Handler: router,
-	}
-
+	server := &http.Server{Addr: cfg.BindAddress, Handler: router}
+	serverErr := make(chan error, 1)
 	go func() {
 		err := server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Error from server: %v", err)
+			serverErr <- err
 		}
 	}()
 
@@ -65,7 +60,15 @@ func main() {
 	// Listen for CTRL+C or other interrupt.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	<-ctx.Done()
+
+	select {
+	case <-ctx.Done():
+		log.Println("Shutting down server..")
+	case err := <-serverErr:
+		if err != nil {
+			log.Printf("Error from server: %v", err)
+		}
+	}
 
 	log.Println("Shutting down server...")
 	stopCtx, stopStop := context.WithTimeout(context.Background(), 5*time.Second)

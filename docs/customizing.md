@@ -93,6 +93,7 @@ type IndexedPost struct {
     Path      string
     Bylines   []string
     Published *time.Time
+    Summary   string
     Title     string
 }
 
@@ -123,10 +124,11 @@ The view model's `Data` property is a `ParsedPost` with this structure:
 
 ```go
 type ParsedPost struct {
-    Title     string
-    Content   template.HTML
     Bylines   []string
-    Published *time.Time
+    Content   template.HTML
+    Published time.Time
+    Summary   string
+    Title     string
 }
 ```
 

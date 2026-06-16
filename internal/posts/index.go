@@ -19,16 +19,18 @@ const (
 	fieldTitle   = "title"
 	fieldContent = "content"
 
-	metadataTitle     = "title"
+	metadataBylines   = "bylines"
 	metadataPath      = "path"
 	metadataPublished = "published"
-	metadataBylines   = "bylines"
+	metadataSummary   = "summary"
+	metadataTitle     = "title"
 )
 
 type IndexedPost struct {
 	Path      string
 	Bylines   []string
 	Published *time.Time
+	Summary   string
 	Title     string
 }
 
@@ -182,26 +184,28 @@ func (s *Index) Upsert(path string, post ParsedPost) {
 	s.corpus.Upsert(routePath, bm25f.NewDocument(
 		bm25f.WithField(fieldTitle, title),
 		bm25f.WithField(fieldContent, content),
-		bm25f.WithMetadata(metadataTitle, post.Title),
+		bm25f.WithMetadata(metadataBylines, string(bylines)),
 		bm25f.WithMetadata(metadataPath, routePath),
 		bm25f.WithMetadata(metadataPublished, published),
-		bm25f.WithMetadata(metadataBylines, string(bylines)),
+		bm25f.WithMetadata(metadataSummary, post.Summary),
+		bm25f.WithMetadata(metadataTitle, post.Title),
 	))
 }
 
 // docToPost converts a bm25f.Document to an IndexedPost.
 // Missing or malformed metadata is degrated to zero values.
 func docToPost(doc *bm25f.Document) (p IndexedPost) {
-	p.Title, _ = doc.Metadata(metadataTitle)
 	p.Path, _ = doc.Metadata(metadataPath)
+	p.Summary, _ = doc.Metadata(metadataSummary)
+	p.Title, _ = doc.Metadata(metadataTitle)
+
+	bylinesStr, _ := doc.Metadata(metadataBylines)
+	_ = json.Unmarshal([]byte(bylinesStr), &p.Bylines)
 
 	publishedStr, _ := doc.Metadata(metadataPublished)
 	if published, err := time.Parse(time.RFC3339, publishedStr); err == nil {
 		p.Published = &published
 	}
-
-	bylinesStr, _ := doc.Metadata(metadataBylines)
-	_ = json.Unmarshal([]byte(bylinesStr), &p.Bylines)
 
 	return p
 }
