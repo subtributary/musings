@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -47,7 +48,7 @@ func New(dirty DirtyFunc, root fs.FS, rootPath string, opts ...Option) (*Monitor
 	m := &Monitor{
 		dirty:    dirty,
 		root:     root,
-		rootPath: rootPath,
+		rootPath: path.Clean(rootPath),
 	}
 
 	for _, opt := range opts {
@@ -124,14 +125,14 @@ func (m *Monitor) handleEvent(event fsnotify.Event) {
 
 	// If info error, the file or directory was removed.
 	if err != nil {
-		m.dirty("/"+event.Name, nil, true)
+		m.signalDirty(event.Name, nil, true)
 		return
 	}
 
 	// At this point, we know it's an existing file or directory.
 	// If it's not a directory, the file was created or updated.
 	if !info.IsDir() {
-		m.dirty("/"+event.Name, info, false)
+		m.signalDirty(event.Name, info, false)
 		return
 	}
 
@@ -142,4 +143,9 @@ func (m *Monitor) handleEvent(event fsnotify.Event) {
 			log.Printf("Unexpected: cannot watch %q: %v", event.Name, err)
 		}
 	}
+}
+
+func (m *Monitor) signalDirty(name string, info fs.FileInfo, isRemoved bool) {
+	name, _ = strings.CutPrefix(name, m.rootPath)
+	m.dirty(name, info, isRemoved)
 }

@@ -103,30 +103,20 @@ func (c *Content) Search(locale localization.Locale, query string) iter.Seq[post
 
 // dirty is called by the monitor when a content file or directory changes.
 func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
-	if info.IsDir() {
-		return
-	}
-
-	c.dirtyModTime(name, info, isRemoved)
-
-	if path.Ext(info.Name()) == ".md" {
-		c.dirtyPost(name, isRemoved)
-	}
-}
-
-func (c *Content) dirtyModTime(name string, info fs.FileInfo, isRemoved bool) {
 	if isRemoved {
 		c.modTimes.Delete(name)
 	} else {
 		c.modTimes.Store(name, info.ModTime())
 	}
-}
 
-func (c *Content) dirtyPost(name string, isRemoved bool) {
+	// Only continue for files that are likely posts.
+	if (!isRemoved && info.IsDir()) || path.Ext(name) != ".md" {
+		return
+	}
+
 	locale, trailingPath := localization.ExtractLocale(c.locales, name)
-
-	// We are only expecting UndLocale if localization is disabled.
 	if locale == localization.UndLocale && len(c.locales) != 0 {
+		// We are only expecting UndLocale if localization is disabled.
 		log.Printf("Unexpected: no index for file locale: %q", name)
 		return
 	}
