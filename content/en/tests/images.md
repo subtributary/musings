@@ -2,6 +2,7 @@
 bylines:
   - by Nathan Belue
 published: 2026-06-15
+summary: This document uses images to test versioned assets in Musings.
 ---
 # Images
 

@@ -3,6 +3,7 @@ bylines:
   - بقلم Nathan Belue
   - ترجمة Codex
 published: 2026-06-15
+summary: يستخدم هذا المستند الصور لاختبار الأصول ذات الإصدارات في Musings.
 ---
 # الصور
 

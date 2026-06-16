@@ -77,34 +77,38 @@ func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
 	}
 
 	summary := getSummary(ctx)
+	if fm.Summary != "" {
+		summary = fm.Summary
+	}
 
 	return ParsedPost{
 		Bylines:   fm.Bylines,
 		Content:   template.HTML(parsedContent),
-		Published: parsePostTime(fm.Published),
+		Published: fm.PublishedTime(),
 		Summary:   summary,
 		Title:     getTitle(ctx),
 	}, nil
 }
 
-// parsePostTime parses a time string in RFC3339 or a supported format.
-// If the string cannot be parsed, zero time is returned.
-func parsePostTime(value string) time.Time {
-	if t, err := time.Parse(time.RFC3339, value); err == nil {
-		return t
-	}
-	if t, err := time.Parse(time.DateTime, value); err == nil {
-		return t
-	}
-	if t, err := time.Parse(time.DateOnly, value); err == nil {
-		return t
-	}
-	return time.Time{}
-}
-
 type postFrontmatter struct {
 	Bylines   []string
 	Published string
+	Summary   string
+}
+
+// PublishedTime parses a time string in RFC3339 or a supported format.
+// If Published cannot be parsed, zero time is returned.
+func (fm *postFrontmatter) PublishedTime() time.Time {
+	if t, err := time.Parse(time.RFC3339, fm.Published); err == nil {
+		return t
+	}
+	if t, err := time.Parse(time.DateTime, fm.Published); err == nil {
+		return t
+	}
+	if t, err := time.Parse(time.DateOnly, fm.Published); err == nil {
+		return t
+	}
+	return time.Time{}
 }
 
 func parseFrontmatter(context parser.Context) (result postFrontmatter, err error) {
