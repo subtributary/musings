@@ -10,9 +10,10 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-// DirtyFunc is called when a watched file may need to be refreshed.
-//
-// name is relative to the watcher root. info is nil when isRemoved is true.
+// DirtyFunc is called when Monitor initializes and when it detects a created,
+// removed, or updated file. The `name` argument is the path relative to the
+// directory being watched and is prefixed with a "/". The `info` argument is
+// only valid if `isRemoved` is false.
 type DirtyFunc func(name string, info fs.FileInfo, isRemoved bool)
 
 type Option func(m *Monitor)
@@ -31,6 +32,8 @@ func WithStat(stat StatFunc) Option {
 	}
 }
 
+// Monitor monitors a directory calls a DirtyFunc at initialization and when
+// a change is detected.
 type Monitor struct {
 	dirty    DirtyFunc
 	root     fs.FS
@@ -39,6 +42,7 @@ type Monitor struct {
 	stat     func(string) (fs.FileInfo, error)
 }
 
+// New creates a new Monitor for a directory.
 func New(dirty DirtyFunc, root fs.FS, rootPath string, opts ...Option) (*Monitor, error) {
 	m := &Monitor{
 		dirty:    dirty,
@@ -67,9 +71,8 @@ func New(dirty DirtyFunc, root fs.FS, rootPath string, opts ...Option) (*Monitor
 	return m, nil
 }
 
-// AddDirectory adds a directory and its subdirectories to the monitor.
-// The directory path must be relative to the root watch directory.
-// The dirty function is called for every file initially and when it changes.
+// AddDirectory adds a directory and its subdirectories to the monitor. The
+// directory must be relative to the root of the directory being watched.
 func (m *Monitor) AddDirectory(name string) error {
 	return fs.WalkDir(m.root, name, func(relPath string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -89,7 +92,7 @@ func (m *Monitor) AddDirectory(name string) error {
 			return fmt.Errorf("path info: %w", err)
 		}
 
-		m.dirty(relPath, info, false)
+		m.dirty("/"+relPath, info, false)
 
 		return nil
 	})
@@ -121,14 +124,14 @@ func (m *Monitor) handleEvent(event fsnotify.Event) {
 
 	// If info error, the file or directory was removed.
 	if err != nil {
-		m.dirty(event.Name, nil, true)
+		m.dirty("/"+event.Name, nil, true)
 		return
 	}
 
 	// At this point, we know it's an existing file or directory.
 	// If it's not a directory, the file was created or updated.
 	if !info.IsDir() {
-		m.dirty(event.Name, info, false)
+		m.dirty("/"+event.Name, info, false)
 		return
 	}
 

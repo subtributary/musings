@@ -36,7 +36,7 @@ func TestLocalizeRoute(t *testing.T) {
 			newPath: "/zh-Hans/index.html",
 		},
 		{
-			name:    "unsupported path locale, on configured locale",
+			name:    "unsupported path locale, one configured locale",
 			reqPath: "/ko/index.html",
 			locales: []localization.Locale{en},
 			newPath: "/en/ko/index.html",
@@ -58,12 +58,24 @@ func TestLocalizeRoute(t *testing.T) {
 			newPath: "/zh-Hans/index.html",
 		},
 		{
+			name:    "special path, no configured locale",
+			reqPath: "/_shared/index.html",
+			locales: []localization.Locale{},
+		},
+		{
+			name:    "special path, one configured locale",
+			reqPath: "/_shared/index.html",
+			locales: []localization.Locale{en},
+		},
+		{
 			name:    "redirect keeps query",
 			reqPath: "/index?q=search",
 			locales: []localization.Locale{en},
 			newPath: "/en/index?q=search",
 		},
 	}
+
+	nopHandler := func(w http.ResponseWriter, r *http.Request) {}
 
 	for _, tt := range tests {
 		tt := tt
@@ -72,7 +84,8 @@ func TestLocalizeRoute(t *testing.T) {
 
 			r := chi.NewRouter()
 			r.Use(localization.LocalizedRoute(tt.locales))
-			r.Get("/index.html", func(w http.ResponseWriter, r *http.Request) {})
+			r.Get("/_shared/index.html", nopHandler)
+			r.Get("/index.html", nopHandler)
 
 			req := httptest.NewRequest("GET", tt.reqPath, nil)
 			rec := httptest.NewRecorder()

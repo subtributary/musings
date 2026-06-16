@@ -61,7 +61,9 @@ func NewIndex() *Index {
 func BuildIndex(contentRoot fs.FS) (*Index, error) {
 	index := NewIndex()
 
-	parser := NewParser()
+	// Ignore modtime of linked assets because it isn't needed for indexing.
+	modTime := func(string) (_ time.Time, _ bool) { return }
+	parser := NewParser(modTime)
 
 	err := fs.WalkDir(contentRoot, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {

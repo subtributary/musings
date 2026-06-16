@@ -138,7 +138,7 @@ func TestMonitor(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected dirty call, got none")
 		}
-		call.Assert(t, "en/hello.md", time.Time{}, false)
+		call.Assert(t, "/en/hello.md", time.Time{}, false)
 	})
 
 	t.Run("added file is dirty", func(t *testing.T) {
@@ -149,7 +149,7 @@ func TestMonitor(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected dirty call, got none")
 		}
-		call.Assert(t, "apple.md", time.Time{}, false)
+		call.Assert(t, "/apple.md", time.Time{}, false)
 	})
 
 	t.Run("added directory is not dirty", func(t *testing.T) {
@@ -177,7 +177,7 @@ func TestMonitor(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected dirty call, got none")
 		}
-		call.Assert(t, "apple.md", time.Time{}, true)
+		call.Assert(t, "/apple.md", time.Time{}, true)
 	})
 
 	t.Run("closed monitor does not call dirty", func(t *testing.T) {

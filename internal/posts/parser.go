@@ -5,16 +5,11 @@ import (
 	"fmt"
 	"html/template"
 	"io/fs"
-	"log"
-	"net/url"
-	"path"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/frontmatter"
 )
@@ -26,26 +21,15 @@ type ParsedPost struct {
 	Published time.Time
 }
 
-type ParserOption func(p *Parser)
-
-type ModTimeFunc func(name string) (time.Time, bool)
-
-func WithModTime(modTime ModTimeFunc) ParserOption {
-	return func(p *Parser) {
-		transformer := versionAssetsTransformer{modTime: modTime}
-		p.docParser.Parser().AddOptions(
-			parser.WithASTTransformers(
-				util.Prioritized(&transformer, 100),
-			),
-		)
-	}
-}
-
 type Parser struct {
 	docParser goldmark.Markdown
 }
 
-func NewParser(opts ...ParserOption) Parser {
+// ModTimeFunc returns the modification time of a file. The `name` argument
+// will be a path relative to the content directory and prefixed with a '/'.
+type ModTimeFunc func(name string) (time.Time, bool)
+
+func NewParser(modTime ModTimeFunc) Parser {
 	p := Parser{}
 
 	p.docParser = goldmark.New(
@@ -55,41 +39,43 @@ func NewParser(opts ...ParserOption) Parser {
 		goldmark.WithParserOptions(
 			parser.WithASTTransformers(
 				util.Prioritized(&removeH1Transformer{}, 0),
+				util.Prioritized(&versionAssetsTransformer{modTime: modTime}, 100),
 			),
 		),
 	)
 
-	for _, opt := range opts {
-		opt(&p)
-	}
-
 	return p
 }
 
-func (s Parser) ParseFile(dir fs.FS, path string) (ParsedPost, error) {
-	if content, err := fs.ReadFile(dir, path); err != nil {
+func (s Parser) ParseFile(dir fs.FS, name string) (ParsedPost, error) {
+	name, _ = strings.CutPrefix(name, "/")
+
+	content, err := fs.ReadFile(dir, name)
+	if err != nil {
 		return ParsedPost{}, fmt.Errorf("read file: %w", err)
-	} else {
-		return s.ParseContent(content)
 	}
+
+	return s.ParseContent(name, content)
 }
 
-func (s Parser) ParseContent(content []byte) (ParsedPost, error) {
-	context := parser.NewContext()
+func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
+	ctx := parser.NewContext()
+	setName(ctx, name)
 
 	var buf bytes.Buffer
-	if err := s.docParser.Convert(content, &buf, parser.WithContext(context)); err != nil {
+	err := s.docParser.Convert(content, &buf, parser.WithContext(ctx))
+	if err != nil {
 		return ParsedPost{}, fmt.Errorf("parse content: %w", err)
 	}
 	parsedContent := string(buf.Bytes())
 
-	fm, err := parseFrontmatter(context)
+	fm, err := parseFrontmatter(ctx)
 	if err != nil {
 		return ParsedPost{}, fmt.Errorf("parse frontmatter: %w", err)
 	}
 
 	return ParsedPost{
-		Title:     getTitle(context),
+		Title:     getTitle(ctx),
 		Content:   template.HTML(parsedContent),
 		Bylines:   fm.Bylines,
 		Published: parsePostTime(fm.Published),
@@ -121,137 +107,4 @@ func parseFrontmatter(context parser.Context) (result postFrontmatter, err error
 		err = fm.Decode(&result)
 	}
 	return
-}
-
-var titleKey = parser.NewContextKey()
-
-func getTitle(pc parser.Context) string {
-	if title := pc.Get(titleKey); title != nil {
-		return title.(string)
-	}
-	return ""
-}
-
-type removeH1Transformer struct{}
-
-func (t *removeH1Transformer) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
-	err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
-			return ast.WalkContinue, nil
-		}
-
-		heading, ok := n.(*ast.Heading)
-		if !ok || heading.Level != 1 {
-			return ast.WalkContinue, nil
-		}
-
-		// Only use top-level H1 as title
-		if heading.Parent() != doc {
-			return ast.WalkContinue, nil
-		}
-
-		pc.Set(titleKey, headingPlainText(heading, reader.Source()))
-
-		heading.Parent().RemoveChild(heading.Parent(), heading)
-		return ast.WalkStop, nil
-	})
-
-	// We should never get an error since we never return one in the walker.
-	if err != nil {
-		log.Fatalf("Unexpected error walking AST: %v", err)
-	}
-}
-
-// headingPlainText extracts the text from a heading, ignoring any formatting.
-func headingPlainText(heading *ast.Heading, source []byte) string {
-	var buf bytes.Buffer
-
-	err := ast.Walk(heading, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
-			return ast.WalkContinue, nil
-		}
-
-		switch n := n.(type) {
-		case *ast.Text:
-			buf.Write(n.Value(source))
-			if n.SoftLineBreak() || n.HardLineBreak() {
-				buf.WriteByte(' ')
-			}
-		case *ast.String:
-			buf.Write(n.Value)
-		case *ast.CodeSpan:
-			for i := 0; i < n.Lines().Len(); i++ {
-				segment := n.Lines().At(i)
-				buf.Write(segment.Value(source))
-			}
-		}
-
-		return ast.WalkContinue, nil
-	})
-
-	// We should never get an error since we never return one in the walker.
-	if err != nil {
-		log.Fatalf("Unexpected error walking AST: %v", err)
-	}
-
-	return buf.String()
-}
-
-// versionAssetsTransformer appends a version timestamp to the query string of
-// any link or image that points at a local asset. A local asset is a relative
-// URL whose path has a file extension; relative URLs without an extension are
-// links to posts, which aren't cached, so they're left alone.
-type versionAssetsTransformer struct {
-	modTime ModTimeFunc
-}
-
-func (t *versionAssetsTransformer) Transform(doc *ast.Document, reader text.Reader, pc parser.Context) {
-	err := ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
-			return ast.WalkContinue, nil
-		}
-
-		switch node := n.(type) {
-		case *ast.Link:
-			node.Destination = t.versionAssetURL(node.Destination)
-		case *ast.Image:
-			node.Destination = t.versionAssetURL(node.Destination)
-		}
-
-		return ast.WalkContinue, nil
-	})
-
-	// We should never get an error since we never return one in the walker.
-	if err != nil {
-		log.Fatalf("Unexpected error walking AST: %v", err)
-	}
-}
-
-// versionAssetURL appends a version timestamp if it's a local asset URL.
-func (t *versionAssetsTransformer) versionAssetURL(dest []byte) []byte {
-	u, err := url.Parse(string(dest))
-	if err != nil {
-		return dest // Not a URL we can work with; leave it alone.
-	}
-
-	// Only version local, relative URLs.
-	if u.IsAbs() || u.Host != "" {
-		return dest
-	}
-
-	// No file extension means it's a link to a post, not a cached asset.
-	if path.Ext(u.Path) == "" {
-		return dest
-	}
-
-	modTime, ok := t.modTime(u.Path)
-	if !ok {
-		return dest
-	}
-
-	query := u.Query()
-	query.Set("v", strconv.FormatInt(modTime.Unix(), 16))
-	u.RawQuery = query.Encode()
-
-	return []byte(u.String())
 }

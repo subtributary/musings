@@ -1,26 +1,25 @@
 package localization
 
-import "strings"
+import (
+	"strings"
+)
 
-// ExtractLocale parses the locale out of the first segment of a path.
-// It returns the parsed locale and the remaining path after that.
-// If the locale is invalid or missing, then it returns (UndLocale, path).
-func ExtractLocale(locales []Locale, path string) (Locale, string) {
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
-	}
+// ExtractLocale parses the locale and trailing path out of a localized URL.
+// If the locale is invalid or missing, then UndLocale is returned.
+// The trailing path is always returned with a "/" prefix.
+func ExtractLocale(locales []Locale, name string) (Locale, string) {
+	name, _ = strings.CutPrefix(name, "/")
+	segments := strings.SplitN(name, "/", 2)
 
-	segments := strings.SplitN(path, "/", 3)
-
-	// Search for the locale in the supported locales and return it if found.
+	// Search for the locale in the supported locales
 	for _, locale := range locales {
-		if strings.EqualFold(locale.Tag, segments[1]) {
-			if len(segments) == 3 {
-				return locale, "/" + segments[2]
+		if strings.EqualFold(locale.Tag, segments[0]) {
+			if len(segments) == 2 {
+				return locale, "/" + segments[1]
 			}
 			return locale, "/"
 		}
 	}
 
-	return UndLocale, path
+	return UndLocale, "/" + name
 }

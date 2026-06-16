@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -40,7 +39,7 @@ func OpenContent(contentRoot string, locales []localization.Locale) (*Content, e
 		c.indexes[loc.Tag] = posts.NewIndex()
 	}
 
-	c.parser = posts.NewParser(posts.WithModTime(c.ModTime))
+	c.parser = posts.NewParser(c.ModTime)
 
 	root, err := os.OpenRoot(contentRoot)
 	if err != nil {
@@ -84,11 +83,13 @@ func (c *Content) GetPost(name string) (posts.ParsedPost, error) {
 }
 
 // ModTime returns the cached modification time of a file.
-// The name parameter is its path relative to the content root.
 func (c *Content) ModTime(name string) (time.Time, bool) {
+	name = path.Clean("/" + name)
+
 	if t, ok := c.modTimes.Load(name); ok {
 		return t.(time.Time), true
 	}
+	
 	return time.Time{}, false
 }
 
@@ -101,7 +102,6 @@ func (c *Content) Search(locale localization.Locale, query string) iter.Seq[post
 }
 
 // dirty is called by the monitor when a content file or directory changes.
-// The name parameter is expected to be its path relative to the content root.
 func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
 	if info.IsDir() {
 		return
@@ -130,8 +130,6 @@ func (c *Content) dirtyPost(name string, isRemoved bool) {
 		log.Printf("Unexpected: no index for file locale: %q", name)
 		return
 	}
-
-	trailingPath, _ = strings.CutPrefix(trailingPath, "/")
 
 	index, ok := c.indexes[locale.Tag]
 	if !ok {
