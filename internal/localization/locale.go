@@ -18,7 +18,7 @@ var UndLocale = Locale{Tag: Und}
 
 type Locale struct {
 	Tag         string `json:"tag"`
-	DateFormat  string `json:"date_format"`
+	dateFormat  string
 	digits      []rune
 	Direction   string `json:"direction"`
 	NativeName  string `json:"native_name"`
@@ -26,7 +26,7 @@ type Locale struct {
 }
 
 func (loc *Locale) FormatDate(when time.Time) string {
-	formatted := when.Format(loc.DateFormat)
+	formatted := when.Format(loc.dateFormat)
 
 	// Replace digits in date string with locale-specific digits.
 	var replaced strings.Builder
@@ -45,7 +45,8 @@ func (loc *Locale) UnmarshalJSON(data []byte) error {
 	type Alias Locale
 	cfg := &struct {
 		Alias
-		Digits string `json:"digits"`
+		DateFormat string `json:"date_format"`
+		Digits     string `json:"digits"`
 	}{}
 
 	if err := json.Unmarshal(data, &cfg); err != nil {
@@ -53,7 +54,9 @@ func (loc *Locale) UnmarshalJSON(data []byte) error {
 	}
 
 	if cfg.DateFormat == "" {
-		cfg.DateFormat = "2006-01-02"
+		cfg.dateFormat = "2006-01-02"
+	} else {
+		cfg.dateFormat = cfg.DateFormat
 	}
 
 	if cfg.Digits == "" {

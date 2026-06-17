@@ -29,15 +29,17 @@ For Arabic and English, your configuration file might look like this:
 {
   "locales": [
     {
-      "tag":"en",
-      "native_name": "English",
-      "direction": "ltr",
+      "tag": "ar",
+      "date_format": "02/01/2006",
+      "direction": "rtl",
+      "digits": "٠١٢٣٤٥٦٧٨٩",
+      "native_name": "العربية",
       "writing_mode": "horizontal-tb"
     },
     {
-      "tag": "ar",
-      "native_name": "العربية",
-      "direction": "rtl",
+      "tag":"en",
+      "direction": "ltr",
+      "native_name": "English",
       "writing_mode": "horizontal-tb"
     }
   ]
@@ -48,10 +50,12 @@ In this example configuration, requests to "example.com" will be redirected to "
 
 The locale properties and their defaults are:
 
-* `tag` — required; BCP 47 tag
-* `native_name` — locale name in its native language \[default per internal table\]
-* `direction` — writing direction, one of: "ltr", "rtl", "auto" \[default: "auto"\]
-* `writing_mode` — writing mode, one of "horizontal-tb", "vertical-rl", "vertical-lr" \[default: "horizontal-tb"\]
+ * `tag` — required; BCP 47 tag
+ * `date_format` — date format string per Go specifications \[default: "2006-01-02"\]
+ * `digits` — digits 0 through 9 to use in numeric localization \[default: "0123456789"\]
+ * `direction` — writing direction, one of: "ltr", "rtl", "auto" \[default: "auto"\]
+ * `native_name` — locale name in its native language \[default per internal table\]
+ * `writing_mode` — writing mode, one of "horizontal-tb", "vertical-rl", "vertical-lr" \[default: "horizontal-tb"\]
 
 If the configuration is invalid, Musings will fail to start and show a descriptive error.
 
@@ -93,6 +97,17 @@ For example, if the data file looks like this:
 ```
 
 Then `{{.Translations.Get "Website logo"}}` will be either "Website logo" or "웹사이트 로고" depending on the active locale.
+
+
+## Data Localization
+
+Currently only date localization is supported.
+
+### Date localization
+
+Dates are localized per the locale configuration with `{{$.FormatDate <date>}}` where `<date>` is a `time.Time` variable or value.
+
+For example, with the Arabic configuration earlier, `$.FormatDate` returns `١٦/٠٦/٢٠٢٦` when passed the date `2026-06-16`.
 
 
 ## What locales are supported?

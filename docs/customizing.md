@@ -51,10 +51,11 @@ The subdirectories are served at "/_static/\<name\>/".
 
 ## Editing the templates
 
-Templates are Go Templates with a ".gohtml" file extension in the "/web/templates" directory.
+Templates are Go templates with a ".gohtml" file extension in the "/web/templates" directory.
 
 The main templates are:
 
+* 404.gohtml
 * index.gohtml
 * post.gohtml
 
@@ -81,7 +82,15 @@ type ViewModel struct {
 
 The structure of the `Data` property depends on the view.
 
-###  index.gohtml
+### Functions
+
+Go templates already have many built-in functions.
+Musings adds these functions:
+
+ * `<url> | versioned` — adds a version query string parameter (`v`) to a URL
+ * `$.FormatDate <date>` — formats a date per the current locale
+
+### Template: index.gohtml
 
 The "index.gohtml" file is the template for the website index, or home page.
 It is served at "/" (or "/q=" when searching).
@@ -112,7 +121,15 @@ When responding to a search,
 the posts in the view model are sorted by how well they match the search query.
 Non-matches and posts with a future publication date are omitted.
 
-### post.gohtml
+### Template: 404.gohtml
+
+The "404.gohtml" file is the template used when a resource is not found.
+It is served at the URL of the missing resource.
+
+The 404 template only has the base view model.
+`Data` is set to `nil`.
+
+### Template: post.gohtml
 
 The "post.gohtml" file is the template for posts in "content/".
 (See [content.md](content.md) for how to create the content.)
