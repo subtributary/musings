@@ -21,7 +21,7 @@
                 <div class="title">{{.Title}}</div>
                 <div class="metadata">
                     {{if ne .Published nil}}
-                        {{.Published.Format "2006-01-02"}}
+                        {{$.Locale.FormatDate .Published}}
                     {{end}}
                 </div>
             </header>

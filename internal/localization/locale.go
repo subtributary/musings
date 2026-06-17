@@ -6,65 +6,108 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"
 )
 
-var UndLocale = Locale{Tag: "und"}
+const Und = "und"
+
+var UndLocale = Locale{Tag: Und}
 
 type Locale struct {
 	Tag         string `json:"tag"`
-	NativeName  string `json:"native_name"`
+	DateFormat  string `json:"date_format"`
+	digits      []rune
 	Direction   string `json:"direction"`
+	NativeName  string `json:"native_name"`
 	WritingMode string `json:"writing_mode"`
+}
+
+func (loc *Locale) FormatDate(when time.Time) string {
+	formatted := when.Format(loc.DateFormat)
+
+	// Replace digits in date string with locale-specific digits.
+	var replaced strings.Builder
+	for _, r := range formatted {
+		if r >= '0' && r <= '9' {
+			replaced.WriteRune(loc.digits[r-'0'])
+		} else {
+			replaced.WriteRune(r)
+		}
+	}
+
+	return replaced.String()
 }
 
 func (loc *Locale) UnmarshalJSON(data []byte) error {
 	type Alias Locale
+	cfg := &struct {
+		Alias
+		Digits string `json:"digits"`
+	}{}
 
-	var state Alias
-	if err := json.Unmarshal(data, &state); err != nil {
+	if err := json.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
 
-	tag, err := language.Parse(state.Tag)
+	if cfg.DateFormat == "" {
+		cfg.DateFormat = "2006-01-02"
+	}
+
+	if cfg.Digits == "" {
+		cfg.digits = []rune("0123456789")
+	} else {
+		cfg.digits = []rune(cfg.Digits)
+		if len(cfg.digits) != 10 {
+			return fmt.Errorf("digit count is not 10: %s", cfg.Digits)
+		}
+	}
+
+	tag, err := language.Parse(cfg.Tag)
 	if err != nil {
-		return fmt.Errorf("parse tag %q: %w", state.Tag, err)
+		return fmt.Errorf("parse tag %s: %w", cfg.Tag, err)
 	}
 	if tag == language.Und {
 		return errors.New("undefined tag is invalid")
 	}
-
-	normalizedTag := tag.String()
-	if !strings.EqualFold(state.Tag, normalizedTag) {
-		log.Printf("Warning: Configured locale %q will be treated as %q.", state.Tag, tag.String())
+	if normTag := tag.String(); cfg.Tag != normTag {
+		log.Printf("Note: Locale %s will be treated as %s.", cfg.Tag, normTag)
+		cfg.Tag = normTag
 	}
-	state.Tag = normalizedTag
 
-	if state.NativeName == "" {
-		state.NativeName = display.Self.Name(tag)
-		if state.NativeName == "" {
-			return fmt.Errorf("native_name required for locale %q", state.Tag)
+	switch cfg.Direction {
+	case "ltr", "rtl", "auto":
+	case "":
+		cfg.Direction = "auto"
+	default:
+		return fmt.Errorf("invalid direction: %s", cfg.Direction)
+	}
+
+	if cfg.NativeName == "" {
+		cfg.NativeName = display.Self.Name(tag)
+		if cfg.NativeName == "" {
+			return fmt.Errorf("native_name required for locale %s", cfg.Tag)
 		}
 	}
 
-	switch state.Direction {
-	case "ltr", "rtl", "auto":
-	case "":
-		state.Direction = "auto"
-	default:
-		return fmt.Errorf("invalid direction %q", state.Direction)
-	}
-
-	switch state.WritingMode {
+	switch cfg.WritingMode {
 	case "horizontal-tb", "vertical-rl", "vertical-lr":
 	case "":
-		state.WritingMode = "horizontal-tb"
+		cfg.WritingMode = "horizontal-tb"
 	default:
-		return fmt.Errorf("invalid writing mode %q", state.WritingMode)
+		return fmt.Errorf("invalid writing mode: %s", cfg.WritingMode)
 	}
 
-	*loc = Locale(state)
+	*loc = Locale(cfg.Alias)
 	return nil
+}
+
+func normalizeTag(input string) (string, error) {
+	tag, err := language.Parse(input)
+	if err != nil {
+		return "", fmt.Errorf("parse tag %s: %w", input, err)
+	}
+	return tag.String(), nil
 }

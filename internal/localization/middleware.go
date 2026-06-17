@@ -79,7 +79,7 @@ func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request
 
 	// Get the locale the user wants and the trailing path.
 	locale, trailing := ExtractLocale(m.locales, r.URL.Path)
-	if locale == UndLocale {
+	if locale.Tag == Und {
 		accept := r.Header.Get("Accept-Language")
 		locale = m.matcher.Choose(accept)
 	}

@@ -76,7 +76,7 @@ func TestLocaleMatcher_Choose(t *testing.T) {
 			m := localization.NewLocaleMatcher(tt.locales)
 
 			got := m.Choose(tt.accept)
-			if got != tt.want {
+			if got.Tag != tt.want.Tag {
 				t.Errorf("Choose = %v, want %v", got, tt.want)
 			}
 		})

@@ -42,7 +42,7 @@ type Config struct {
 func LoadConfig() (cfg Config, err error) {
 	cfg.ConfigFile, err = loadConfigFile()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Error loading config file: %v", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error loading config file: %v\n", err)
 		return
 	}
 

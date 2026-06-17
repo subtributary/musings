@@ -124,7 +124,7 @@ func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
 	}
 
 	locale, trailingPath := localization.ExtractLocale(c.locales, name)
-	if locale == localization.UndLocale && len(c.locales) != 0 {
+	if locale.Tag == localization.Und && len(c.locales) != 0 {
 		// We are only expecting UndLocale if localization is disabled.
 		log.Printf("Unexpected: no index for file locale: %q", name)
 		return

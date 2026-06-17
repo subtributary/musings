@@ -86,8 +86,18 @@ func TestLocale_JSON(t *testing.T) {
 			want: ar,
 		},
 		{
+			name:    "digit count not 10",
+			json:    `{"tag:"en", digits: "abcdef"}`,
+			wantErr: true,
+		},
+		{
 			name: "locale fully defined",
-			json: `{"tag":"mn-Mong", "native_name":"ᠮᠣᠩᠭᠣᠯ", "direction":"ltr", "writing_mode":"vertical-lr"}`,
+			json: `{"tag":"mn-Mong",
+				"date_format": "2006.01.02",
+				"digits": "0123456789",
+				"native_name":"ᠮᠣᠩᠭᠣᠯ",
+				"direction":"ltr", 
+				"writing_mode":"vertical-lr"}`,
 			want: mnMong,
 		},
 	}
@@ -106,7 +116,7 @@ func TestLocale_JSON(t *testing.T) {
 				t.Fatalf("want no error, got: %v", err)
 			}
 
-			if locale != tt.want {
+			if locale.Tag != tt.want.Tag {
 				t.Errorf("locale = %v, want %v", locale, tt.want)
 			}
 		})

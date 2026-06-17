@@ -2,20 +2,24 @@
   "locales": [
     {
       "tag":"en",
-      "native_name": "English",
       "direction": "ltr",
+      "native_name": "English",
       "writing_mode": "horizontal-tb"
     },
     {
       "tag": "ar",
-      "native_name": "العربية",
+      "date_format": "02/01/2006",
       "direction": "rtl",
+      "digits": "٠١٢٣٤٥٦٧٨٩",
+      "native_name": "العربية",
       "writing_mode": "horizontal-tb"
     },
     {
       "tag": "mn-Mong",
-      "native_name": "ᠮᠣᠩᠭᠣᠯ",
+      "date_format": "2006.01.02",
+      "digits": "᠐᠑᠒᠓᠔᠕᠖᠗᠘᠙",
       "direction": "ltr",
+      "native_name": "ᠮᠣᠩᠭᠣᠯ",
       "writing_mode": "vertical-lr"
     }
   ]
