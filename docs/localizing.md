@@ -1,28 +1,14 @@
 # Localization
 
-Website content can be change based on the requested locale.
+Website content and URLs can change based on the requested locale.
 
 Musings source code is preconfigured for Arabic, English, and Mongolian.
 These three demonstrate locales with drastically different layout needs.
 
-## How it works
-
-If localization is enabled, the first segment of the path must be the locale.
-This applies to both the HTTP request and the file within the content directory.
-If the request path is not localized and canonical,
-the server responds with a redirect to a canonical localized path.
-
-The locale is decided from these sources in order:
-
-1. The first segment of the path;
-2. The `Accept-Language` request header compared against configured locales;
-3. The first configured locale
-
-## Enabling localization
-
-### Configure locales:
+## Configuration file
 
 To enable localization, configure the locales in "data/config.json" in the `locales` array.
+A single entry with an "und" tag can be used to localize Musings without enabling route localization.
 For Arabic and English, your configuration file might look like this:
 
 ```json
@@ -46,23 +32,37 @@ For Arabic and English, your configuration file might look like this:
 }
 ```
 
-In this example configuration, requests to "example.com" will be redirected to "example.com/ar/" or "example.com/en/".
-
 The locale properties and their defaults are:
 
- * `tag` — required; BCP 47 tag
- * `date_format` — date format string per Go specifications \[default: "2006-01-02"\]
- * `digits` — digits 0 through 9 to use in numeric localization \[default: "0123456789"\]
- * `direction` — writing direction, one of: "ltr", "rtl", "auto" \[default: "auto"\]
- * `native_name` — locale name in its native language \[default per internal table\]
- * `writing_mode` — writing mode, one of "horizontal-tb", "vertical-rl", "vertical-lr" \[default: "horizontal-tb"\]
+* `tag` — required; BCP 47 tag
+* `date_format` — date format string per Go specifications \[default: "2006-01-02"\]
+* `digits` — digits 0 through 9 to use in numeric localization \[default: "0123456789"\]
+* `direction` — writing direction, one of: "ltr", "rtl", "auto" \[default: "auto"\]
+* `native_name` — locale name in its native language \[default per internal table\]
+* `writing_mode` — writing mode, one of "horizontal-tb", "vertical-rl", "vertical-lr" \[default: "horizontal-tb"\]
 
-If the configuration is invalid, Musings will fail to start and show a descriptive error.
 
-### Organize content directory:
+## Route localization
 
-After enabling localization, the content directory needs to be divided by the configured locales.
-Otherwise, no content will be served.
+To enable route localization, populate `locales` in the configuration with anything other than "und".
+The "und" locale can be used therein to localize Musings without enabling route localization.
+
+Route localization forces URLs to begin with a valid configured locale.
+If an unlocalized URL is requested, or if the URL's locale is not canonical,
+the server responds with a redirect to a canonical localized path.
+The locale used for the redirect is the detected best match for the website visitor.
+
+Route localization applies to everything in the "content" directory tree except for "content/_shared/".
+
+For example, assuming Arabic (ar) is configured for route localization:
+
+ * `/hello` redirects to `/ar/hello`
+ * `/_shared/wave.png` is not redirected.
+ * `/_static/css/default.css` is not redirected.
+
+### Organize content directory
+
+With route localization enabled, the content directory must be organized by locale.
 For the configuration example above, this is how that looks:
 
 * `content/ar/`
@@ -74,6 +74,7 @@ Shared files are served at "/_shared/", but relative paths can be used in markdo
 * `content/_shared/logo.png`
 
 In "content/en/example.md", this can be included with `![](/_shared/logo.png)` or `![](../_shared/logo.png)`.
+
 
 ## String localization
 

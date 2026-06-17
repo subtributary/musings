@@ -2964,6 +2964,7 @@ html {
 
 body {
   background-image: url("/_static/images/background-light.jpg");
+  background-attachment: fixed;
   background-position: top;
   background-size: cover;
   min-height: 100%;

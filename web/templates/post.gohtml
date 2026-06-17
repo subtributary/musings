@@ -14,7 +14,7 @@
                 {{end}}
                 {{if ne .Data.Published nil}}
                     {{.Translations.Get "published"}}
-                    {{.Data.Published.Format "2006-01-02"}}<br>
+                    {{$.FormatDate .Data.Published}}<br>
                 {{end}}
             </div>
         </header>

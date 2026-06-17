@@ -83,6 +83,9 @@ func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request
 		accept := r.Header.Get("Accept-Language")
 		locale = m.matcher.Choose(accept)
 	}
+	if locale.Tag == Und {
+		return r, true
+	}
 
 	// Ensure the URL is the canonical localized URL.
 	locPath := "/" + path.Join(locale.Tag, trailing)
