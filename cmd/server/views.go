@@ -21,11 +21,15 @@ type LocaleOption struct {
 }
 
 type ViewModel struct {
-	LocaleOptions []*LocaleOption
-	Locale        *LocaleOption
+	LocaleOptions []LocaleOption
+	Locale        LocaleOption
 	Translations  localization.Translations
 	RootURL       string
 	Data          any
+}
+
+func (vm ViewModel) FormatDate(when time.Time) string {
+	return vm.Locale.FormatDate(when)
 }
 
 type View struct {
@@ -133,8 +137,8 @@ func (f *ViewFactory) createVM(reqLocale localization.Locale, relPath string) (v
 	}
 
 	// Defaults for no localization.
-	vm.LocaleOptions = make([]*LocaleOption, len(f.locales))
-	vm.Locale = &LocaleOption{Locale: reqLocale, IsCurrent: true, URL: "/"}
+	vm.LocaleOptions = make([]LocaleOption, len(f.locales))
+	vm.Locale = LocaleOption{Locale: reqLocale, IsCurrent: true, URL: "/"}
 	vm.RootURL = "/"
 
 	// Localized websites use the locale prefix as the root URL.
@@ -145,7 +149,7 @@ func (f *ViewFactory) createVM(reqLocale localization.Locale, relPath string) (v
 	// If locales are configured, set up locales and find current one.
 	for i, cfgLocale := range f.locales {
 		localizedPath, _ := url.JoinPath("/", cfgLocale.Tag, relPath)
-		option := &LocaleOption{
+		option := LocaleOption{
 			Locale:    cfgLocale,
 			IsCurrent: cfgLocale.Tag == reqLocale.Tag,
 			URL:       localizedPath,
