@@ -2,7 +2,6 @@ package localization
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -71,9 +70,6 @@ func (loc *Locale) UnmarshalJSON(data []byte) error {
 	tag, err := language.Parse(cfg.Tag)
 	if err != nil {
 		return fmt.Errorf("parse tag %s: %w", cfg.Tag, err)
-	}
-	if tag == language.Und {
-		return errors.New("undefined tag is invalid")
 	}
 	if normTag := tag.String(); cfg.Tag != normTag {
 		log.Printf("Note: Locale %s will be treated as %s.", cfg.Tag, normTag)

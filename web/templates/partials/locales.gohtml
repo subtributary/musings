@@ -1,4 +1,4 @@
-{{if eq (len .LocaleOptions) 0}}
+{{if le (len .LocaleOptions) 1}}
     <!-- No languages are configured. -->
 {{else}}
     <details class="dropdown">

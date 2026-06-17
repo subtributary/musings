@@ -13,65 +13,84 @@ func TestLocalizeRoute(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		reqPath string
-		locales []localization.Locale
-		newPath string
+		name         string
+		locales      []localization.Locale
+		reqPath      string
+		wantRedirect string
 	}{
+		/* no configured locale */
 		{
-			name:    "no path locale, no configured locale",
-			reqPath: "/index.html",
+			name:    "no configured locale, no path locale",
 			locales: []localization.Locale{},
-		},
-		{
-			name:    "no path locale, one configured locale",
 			reqPath: "/index.html",
-			locales: []localization.Locale{en},
-			newPath: "/en/index.html",
 		},
 		{
-			name:    "no path locale, configured locale has region",
+			name:    "no configured locale, special path",
+			locales: []localization.Locale{},
+			reqPath: "/_shared/index.html",
+		},
+
+		/* und locale */
+		{
+			name:    "configured locale is und, no path locale",
+			locales: []localization.Locale{},
 			reqPath: "/index.html",
-			locales: []localization.Locale{zhHans},
-			newPath: "/zh-Hans/index.html",
 		},
 		{
-			name:    "unsupported path locale, one configured locale",
-			reqPath: "/ko/index.html",
+			name:    "configured locale is und, special path",
+			locales: []localization.Locale{},
+			reqPath: "/_shared/index.html",
+		},
+
+		/* one configured locale */
+		{
+			name:         "one configured locale, no path locale",
+			locales:      []localization.Locale{en},
+			reqPath:      "/index.html",
+			wantRedirect: "/en/index.html",
+		},
+		{
+			name:         "one configured locale, unsupported path locale",
+			locales:      []localization.Locale{en},
+			reqPath:      "/ko/index.html",
+			wantRedirect: "/en/ko/index.html",
+		},
+		{
+			name:    "one configured locale, path has locale",
 			locales: []localization.Locale{en},
-			newPath: "/en/ko/index.html",
-		},
-		{
-			name:    "path locale",
 			reqPath: "/en/index.html",
-			locales: []localization.Locale{en},
 		},
 		{
-			name:    "path locale with region",
+			name:    "one configured locale, special path",
+			locales: []localization.Locale{en},
+			reqPath: "/_shared/index.html",
+		},
+
+		/* configured locale is regional */
+		{
+			name:         "regional configured locale, no path locale",
+			locales:      []localization.Locale{zhHans},
+			reqPath:      "/index.html",
+			wantRedirect: "/zh-Hans/index.html",
+		},
+		{
+			name:    "regional configured locale, path has locale",
+			locales: []localization.Locale{zhHans},
 			reqPath: "/zh-Hans/index.html",
-			locales: []localization.Locale{zhHans},
 		},
 		{
-			name:    "path locale with lowercase region",
-			reqPath: "/zh-hans/index.html",
-			locales: []localization.Locale{zhHans},
-			newPath: "/zh-Hans/index.html",
+			name:         "regional configured locale, path is lowercase",
+			locales:      []localization.Locale{zhHans},
+			reqPath:      "/zh-hans/index.html",
+			wantRedirect: "/zh-Hans/index.html",
 		},
+
+		/* special cases */
 		{
-			name:    "special path, no configured locale",
-			reqPath: "/_shared/index.html",
-			locales: []localization.Locale{},
-		},
-		{
-			name:    "special path, one configured locale",
-			reqPath: "/_shared/index.html",
-			locales: []localization.Locale{en},
-		},
-		{
-			name:    "redirect keeps query",
-			reqPath: "/index?q=search",
-			locales: []localization.Locale{en},
-			newPath: "/en/index?q=search",
+			name:         "redirect keeps query",
+			reqPath:      "/index?q=search",
+			locales:      []localization.Locale{en},
+			wantRedirect: "/en/index?q=search",
 		},
 	}
 
@@ -91,12 +110,12 @@ func TestLocalizeRoute(t *testing.T) {
 			rec := httptest.NewRecorder()
 			r.ServeHTTP(rec, req)
 
-			if tt.newPath == "" && rec.Code != http.StatusOK {
+			if tt.wantRedirect == "" && rec.Code != http.StatusOK {
 				t.Fatalf("Code: got %v, want %v", rec.Code, http.StatusOK)
 			}
 
-			if loc := rec.Header().Get("Location"); loc != tt.newPath {
-				t.Fatalf("Location: got %v, want %v", loc, tt.newPath)
+			if loc := rec.Header().Get("Location"); loc != tt.wantRedirect {
+				t.Fatalf("Location: got %v, want %v", loc, tt.wantRedirect)
 			}
 		})
 	}

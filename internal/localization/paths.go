@@ -9,6 +9,11 @@ import (
 // The trailing path is always returned with a "/" prefix.
 func ExtractLocale(locales []Locale, name string) (Locale, string) {
 	name, _ = strings.CutPrefix(name, "/")
+
+	if len(locales) == 1 && locales[0].Tag == Und {
+		return UndLocale, "/" + name
+	}
+
 	segments := strings.SplitN(name, "/", 2)
 
 	// Search for the locale in the supported locales
