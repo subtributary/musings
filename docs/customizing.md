@@ -48,6 +48,10 @@ because they are managed separately from customization assets.
 
 The subdirectories are served at "/_static/\<name\>/".
 
+### Special case: favicon.ico
+
+The file "web/static/images/favicon.ico" is served at both "/_static/images/favicon.ico" and "/favicon.ico".
+
 
 ## Editing the templates
 
