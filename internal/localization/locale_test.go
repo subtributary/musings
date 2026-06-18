@@ -56,9 +56,9 @@ func TestLocale_JSON(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "undefined locale",
-			json:    `{"tag":"und","native_name":"und"}`,
-			wantErr: true,
+			name: "undefined locale",
+			json: `{"tag":"und","native_name":"und"}`,
+			want: und,
 		},
 		{
 			name: "tag only",
