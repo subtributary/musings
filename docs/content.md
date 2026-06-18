@@ -8,17 +8,18 @@ Other files, such as images, are served unchanged at a routes matching their fil
 For example, "content/2026/vacation.md" is rendered as HTML and served at "/2026/vacation",
 and "content/2026/hotel-view.jpg" is served at "/2026/hotel-view.jpg".
 
-## Naming convention
+## Naming conventions
 
-Musings is flexible when it comes to file names,
-but these following these guidelines will yield the best experience:
+Follow these naming conventions for the best experience:
 
 * File names must be lowercase.
-* File names must include an extension.
+* File names must have an extension.
 * File names must not contain spaces or underscores—use `-` to delimit words.
 * Directory names must be lowercase.
     * The exception to this is locale region names. (See [localizing.md].)
+* Directory names must not contain spaces or underscores—use `-` to delimit words.
 
+If these naming conventions are not followed, Musings may still load, but the website may not work as intended.
 
 ## Markdown content format
 

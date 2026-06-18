@@ -42,8 +42,7 @@ Additional assets *to be used for customization* should be placed in a subdirect
 The subdirectory should be named after the asset type: "fonts", "images", etc.
 
 Additional assets *to be used for customization* should be placed under "web/static/".
-Assets used by content should not be placed here
-because they are managed separately from customization assets.
+Assets used by content should not be placed here because they are managed separately from customization assets.
 (See [content.md](content.md) for where to put content media.)
 
 The subdirectories are served at "/_static/\<name\>/".
