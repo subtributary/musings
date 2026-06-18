@@ -101,8 +101,3 @@ func (m *LocalizedRouteMiddleware) Handle(w http.ResponseWriter, r *http.Request
 	chiContext.RoutePath = trailing
 	return r, true
 }
-
-// isReserved returns tru if a file name is a system name that should not be localized.
-func (m *LocalizedRouteMiddleware) isReserved(name string) bool {
-	//
-}

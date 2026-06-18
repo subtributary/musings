@@ -43,8 +43,7 @@ func main() {
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
 	router.Get("/", indexHandler(responder, content))
-	router.Get("/_static/*", http.StripPrefix("/_static/", fileHandler(responder, staticRoot)).ServeHTTP)
-	router.Get("/favicon.ico", fileHandler(responder, staticRoot))
+	router.Get("/_static/*", fileHandler("/_static/", responder, staticRoot))
 	router.Get("/*", contentHandler(responder, content))
 
 	server := &http.Server{Addr: cfg.BindAddress, Handler: router}
@@ -111,10 +110,11 @@ func contentHandler(response Responder, content *Content) http.HandlerFunc {
 	}
 }
 
-func fileHandler(response Responder, root *os.Root) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func fileHandler(prefix string, response Responder, root *os.Root) http.HandlerFunc {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response.File(w, r, root, r.URL.Path)
-	}
+	})
+	return http.StripPrefix(prefix, handler).ServeHTTP
 }
 
 func indexHandler(response Responder, content *Content) http.HandlerFunc {
