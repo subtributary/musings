@@ -51,11 +51,24 @@ func OpenContent(contentRoot string, locales []localization.Locale) (*Content, e
 		err = fmt.Errorf("new monitor: %v", err)
 		return nil, errors.Join(err, c.Close())
 	}
+
+	// The intitial call blocks.
 	err = c.monitor.AddDirectory(".")
 	if err != nil {
-		err = fmt.Errorf("monitor content directory: %v", err)
+		err = fmt.Errorf("monitor content directory: %w", err)
 		return nil, errors.Join(err, c.Close())
 	}
+
+	// Make the indexes thread-safe after initial population.
+	for _, idx := range c.indexes {
+		if err = idx.MakeConcurrent(); err != nil {
+			err = fmt.Errorf("make indexes thread safe: %w", err)
+			return nil, errors.Join(err, c.Close())
+		}
+	}
+
+	// Start listening for updates now that our index is set up.
+	go c.monitor.Listen()
 
 	return c, nil
 }

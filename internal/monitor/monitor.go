@@ -67,8 +67,6 @@ func New(dirty DirtyFunc, root fs.FS, rootPath string, opts ...Option) (*Monitor
 		m.stat = os.Stat
 	}
 
-	go m.listen()
-
 	return m, nil
 }
 
@@ -103,7 +101,7 @@ func (m *Monitor) Close() error {
 	return m.watcher.Close()
 }
 
-func (m *Monitor) listen() {
+func (m *Monitor) Listen() {
 	for {
 		select {
 		case event, ok := <-m.watcher.Events():

@@ -118,6 +118,7 @@ func TestMonitor(t *testing.T) {
 	files := fstest.MapFS{}
 	watcher := NewTestWatcher()
 	dirties := NewDirtyCollector()
+
 	subject, err := monitor.New(dirties.Dirty, files, ".",
 		monitor.WithFileWatcher(watcher),
 		monitor.WithStat(files.Stat),
@@ -126,6 +127,7 @@ func TestMonitor(t *testing.T) {
 		t.Fatalf("error creating monitor: %v", err)
 	}
 	defer (func() { _ = subject.Close() })()
+	go subject.Listen()
 
 	t.Run("initial files are dirty", func(t *testing.T) {
 		files["en/hello.md"] = &fstest.MapFile{}

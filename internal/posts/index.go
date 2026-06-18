@@ -40,15 +40,16 @@ func (p IndexedPost) isPublished(now time.Time) bool {
 
 type Index struct {
 	ranker    *bm25f.BM25F
-	corpus    *bm25f.Corpus
+	corpus    bm25f.Corpus
 	tokenizer tokens.Analyzer
 }
 
 // NewIndex creates an empty index ready to be populated.
+// Once the initial population is done, call MakeThreadSafe.
 func NewIndex() *Index {
 	s := &Index{
 		ranker:    bm25f.New(),
-		corpus:    bm25f.NewCorpus(),
+		corpus:    bm25f.NewSimpleCorpus(),
 		tokenizer: tokens.NewDefaultTokenizer(),
 	}
 
@@ -94,9 +95,9 @@ func BuildIndex(contentRoot fs.FS) (*Index, error) {
 
 // List lists all posts in order of publication with the most recent one first.
 // Posts with publication dates in the future are omitted.
-func (s *Index) List() iter.Seq[IndexedPost] {
+func (idx *Index) List() iter.Seq[IndexedPost] {
 	var results []IndexedPost
-	for _, doc := range s.corpus.Documents() {
+	for _, doc := range idx.corpus.Documents() {
 		results = append(results, docToPost(doc))
 	}
 
@@ -126,21 +127,34 @@ func (s *Index) List() iter.Seq[IndexedPost] {
 	}
 }
 
+// MakeConcurrent makes the index thread-safe at the cost of update speed.
+// Call this after the index's initial population.
+func (idx *Index) MakeConcurrent() error {
+	sc, ok := idx.corpus.(*bm25f.SimpleCorpus)
+	if !ok {
+		return fmt.Errorf("index corpus is already thread-safe")
+	}
+
+	idx.corpus = bm25f.NewSyncCorpus(sc)
+
+	return nil
+}
+
 // Remove removes a post from the index.
-func (s *Index) Remove(path string) {
-	s.corpus.Remove(path)
+func (idx *Index) Remove(path string) {
+	idx.corpus.Remove(path)
 }
 
 // Search returns the posts matching the query,
 // sorted by match score with the best match first.
 // Posts with publication dates in the future are omitted.
-func (s *Index) Search(query string) iter.Seq[IndexedPost] {
+func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 	if strings.TrimSpace(query) == "" {
-		return s.List()
+		return idx.List()
 	}
 
-	queryToks := s.tokenizer.Tokens(query)
-	scores := s.ranker.Score(s.corpus, queryToks)
+	queryToks := idx.tokenizer.Tokens(query)
+	scores := idx.ranker.Score(idx.corpus, queryToks)
 
 	scores = slices.DeleteFunc(scores, func(r bm25f.Result) bool {
 		return r.Score == 0
@@ -169,10 +183,10 @@ func (s *Index) Search(query string) iter.Seq[IndexedPost] {
 }
 
 // Upsert adds a post to the index.
-func (s *Index) Upsert(path string, post ParsedPost) {
+func (idx *Index) Upsert(path string, post ParsedPost) {
 	routePath := strings.TrimSuffix(path, ".md")
-	title := s.tokenizer.Tokens(post.Title)
-	content := s.tokenizer.Tokens(string(post.Content))
+	title := idx.tokenizer.Tokens(post.Title)
+	content := idx.tokenizer.Tokens(string(post.Content))
 
 	var published string
 	if !post.Published.IsZero() {
@@ -181,7 +195,7 @@ func (s *Index) Upsert(path string, post ParsedPost) {
 
 	bylines, _ := json.Marshal(post.Bylines)
 
-	s.corpus.Upsert(routePath, bm25f.NewDocument(
+	idx.corpus.Upsert(routePath, bm25f.NewDocument(
 		bm25f.WithField(fieldTitle, title),
 		bm25f.WithField(fieldContent, content),
 		bm25f.WithMetadata(metadataBylines, string(bylines)),
