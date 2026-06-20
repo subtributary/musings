@@ -144,6 +144,7 @@ func (m *Monitor) handleEvent(event fsnotify.Event) {
 }
 
 func (m *Monitor) signalDirty(name string, info fs.FileInfo, isRemoved bool) {
+	name = strings.ReplaceAll(name, string(os.PathSeparator), "/")
 	name, _ = strings.CutPrefix(name, m.rootPath)
 	name, _ = strings.CutPrefix(name, "/")
 	name = "/" + name

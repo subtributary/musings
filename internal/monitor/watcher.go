@@ -2,6 +2,8 @@ package monitor
 
 import "github.com/fsnotify/fsnotify"
 
+// Watcher watches the file system for changes.
+// The file paths used in notifications will use the OS file path separator.
 type Watcher interface {
 	Add(string) error
 	Close() error
