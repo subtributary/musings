@@ -136,7 +136,7 @@ func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
 		return
 	}
 
-	locale, trailingPath := localization.ExtractLocale(c.locales, name)
+	locale, _ := localization.ExtractLocale(c.locales, name)
 
 	index, ok := c.indexes[locale.Tag]
 	if !ok {
@@ -145,13 +145,13 @@ func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
 	}
 
 	if isRemoved {
-		index.Remove(trailingPath)
+		index.Remove(name)
 	} else {
 		post, err := c.parser.ParseFile(c.root.FS(), name)
 		if err != nil {
 			log.Printf("Error: parse post %q: %v", name, err)
 			return
 		}
-		index.Upsert(trailingPath, post)
+		index.Upsert(name, post)
 	}
 }
