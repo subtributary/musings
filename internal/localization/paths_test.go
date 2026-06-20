@@ -139,6 +139,14 @@ func TestExtractLocale(t *testing.T) {
 			wantTag:      "en",
 			wantTrailing: "/sub/test",
 		},
+		{
+			// Not supported!
+			name:         "one locale, Windows file path",
+			locales:      []localization.Locale{en},
+			urlPath:      `\en\test`,
+			wantTag:      "und",
+			wantTrailing: `/\en\test`,
+		},
 
 		/* two locales */
 		{

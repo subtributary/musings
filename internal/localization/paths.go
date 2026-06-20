@@ -7,6 +7,7 @@ import (
 // ExtractLocale parses the locale and trailing path out of a localized URL.
 // If the locale is invalid or missing, then UndLocale is returned.
 // The trailing path is always returned with a "/" prefix.
+// The name argument must use "/" for a path separator.
 func ExtractLocale(locales []Locale, name string) (Locale, string) {
 	name, _ = strings.CutPrefix(name, "/")
 
