@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -135,6 +136,7 @@ func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
 	if (!isRemoved && info.IsDir()) || path.Ext(name) != ".md" {
 		return
 	}
+	name = strings.TrimSuffix(name, ".md")
 
 	locale, _ := localization.ExtractLocale(c.locales, name)
 
@@ -147,7 +149,7 @@ func (c *Content) dirty(name string, info fs.FileInfo, isRemoved bool) {
 	if isRemoved {
 		index.Remove(name)
 	} else {
-		post, err := c.parser.ParseFile(c.root.FS(), name)
+		post, err := c.parser.ParseFile(c.root.FS(), name+".md")
 		if err != nil {
 			log.Printf("Error: parse post %q: %v", name, err)
 			return
