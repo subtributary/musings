@@ -1,10 +1,10 @@
 <!doctype HTML>
-<html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" writing-mode="{{.Locale.WritingMode}}">
+<html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" class="{{.Locale.WritingMode}}">
 {{template "partials/head"}}
 <body>
 {{template "partials/header" .}}
 
-<main>
+<main class="container">
     <article>
         <header>
             <h1 class="title">{{.Data.Title}}</h1>

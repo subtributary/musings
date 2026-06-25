@@ -1,16 +1,13 @@
 {{if le (len .LocaleOptions) 1}}
     <!-- No languages are configured. -->
 {{else}}
-    <details class="dropdown">
-        <summary>
-            <span
-                aria-label="{{.Translations.Get "Select Langauge"}}"
-                aria-hidden="true"
-            >文Ａ &ndash; {{.Locale.NativeName}}</span>
-        </summary>
-        <ul>
+    <div class="dropdown">
+        <button popovertarget="locales" aria-label="{{.Translations.Get "Select Langauge"}}" aria-hidden="true">
+            文Ａ &ndash; {{.Locale.NativeName}}
+        </button>
+        <ul id="locales" popover>
             {{range .LocaleOptions}}
-                <li class="script-{{.Tag}}" dir="{{.Direction}}">
+                <li dir="{{.Direction}}">
                     {{if .IsCurrent}}
                         <strong>{{.NativeName}}</strong>
                     {{else}}
@@ -19,5 +16,5 @@
                 </li>
             {{end}}
         </ul>
-    </details>
+    </div>
 {{end}}

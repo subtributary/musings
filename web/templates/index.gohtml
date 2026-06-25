@@ -1,5 +1,5 @@
-<!doctype HTML>
-<html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" writing-mode="{{.Locale.WritingMode}}">
+<!doctype html>
+<html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" class="{{.Locale.WritingMode}}">
 {{template "partials/head"}}
 <body>
 {{template "partials/header" .}}
@@ -8,7 +8,7 @@
     document.getElementById("search").value = {{.Data.Query}}
 </script>
 
-<main>
+<main class="container">
     {{if eq (len .Data.Results) 0}}
         <article>
             {{.Translations.Get "Zero matches"}}
