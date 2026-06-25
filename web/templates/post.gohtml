@@ -1,7 +1,15 @@
 <!doctype HTML>
 <html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" class="{{.Locale.WritingMode}}">
-{{template "partials/head"}}
-<body>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Musings</title>
+
+    {{template "partials/favicons"}}
+
+    <link rel="stylesheet" href="{{"/_static/css/default.css" | versioned}}">
+</head>
+<body class="post-page">
 {{template "partials/header" .}}
 
 <main class="container">

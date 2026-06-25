@@ -1,1 +1,75 @@
-@use "@subtributary/drip/scss/drip" as *;
+//@use "@subtributary/drip/scss/drip" as *;
+@use "drip/drip.scss";
+@use "fonts";
+
+.metadata {
+  @extend .text-muted;
+}
+
+#main-header {
+  border-block-end: 1px solid var(--drip-color-border);
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity var(--drip-animation-speed) ease;
+    //opacity: 0.5;
+
+    &:focus-within, &:hover {
+      opacity: 1.0;
+    }
+  }
+
+  .search-form {
+    flex: 1 1 auto;
+  }
+}
+
+#locales {
+  inset: auto;
+  inset-inline-end: anchor(end);
+  height: fit-content;
+  width: fit-content;
+
+  a {
+    display: block;
+    padding: var(--drip-padding);
+
+    &:visited { color: var(--drip-color-link); }
+  }
+
+  li {
+    display: block;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.index-page {
+  .metadata {
+    flex: 0 0 auto;
+  }
+
+  article {
+    border: 1px solid var(--drip-color-border);
+    border-radius: var(--drip-padding);
+    padding: var(--drip-padding);
+  }
+
+  h2 {
+    font-size: inherit;
+    line-height: inherit;
+    margin: 0;
+  }
+}
+
+.post-page {
+  h1 {
+    margin: 0;
+  }
+  article > header {
+    border-block-end: 1px solid var(--drip-color-border);
+    padding-block-end: var(--drip-spacing);
+  }
+}

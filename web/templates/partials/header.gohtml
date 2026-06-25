@@ -3,17 +3,18 @@
         <a href="{{.RootURL}}">
             <img src="{{"/_static/images/favicon.svg" | versioned}}"
                  alt="{{.Translations.Get "Website logo"}}"
-                 style="height: 2rem; width: 2rem;"
+                 style="height:3rem; width:3rem;"
             >
-            <span>Musings</span>
         </a>
 
-        <form action="{{.RootURL}}" method="get">
-            <label class="visually-hidden" for="search">
-                {{.Translations.Get "Search"}}
-            </label>
-            <input id="search" name="q" type="search">
-        </form>
+        <div class="search-form">
+            <form action="{{.RootURL}}" method="get">
+                <label class="visually-hidden" for="search">
+                    {{.Translations.Get "Search"}}
+                </label>
+                <input id="search" name="q" type="search">
+            </form>
+        </div>
 
         <div class="locale-switcher">
             {{template "partials/locales" .}}

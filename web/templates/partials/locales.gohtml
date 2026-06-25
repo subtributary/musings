@@ -3,18 +3,20 @@
 {{else}}
     <div class="dropdown">
         <button popovertarget="locales" aria-label="{{.Translations.Get "Select Langauge"}}" aria-hidden="true">
-            文Ａ &ndash; {{.Locale.NativeName}}
+            文Ａ
         </button>
-        <ul id="locales" popover>
-            {{range .LocaleOptions}}
-                <li dir="{{.Direction}}">
-                    {{if .IsCurrent}}
-                        <strong>{{.NativeName}}</strong>
-                    {{else}}
-                        <a href="{{.URL}}">{{.NativeName}}</a>
-                    {{end}}
-                </li>
-            {{end}}
-        </ul>
+        <div id="locales" popover>
+            <ul>
+                {{range .LocaleOptions}}
+                    <li dir="{{.Direction}}">
+                        {{if .IsCurrent}}
+                            <strong>{{.NativeName}}</strong>
+                        {{else}}
+                            <a href="{{.URL}}">{{.NativeName}}</a>
+                        {{end}}
+                    </li>
+                {{end}}
+            </ul>
+        </div>
     </div>
 {{end}}
