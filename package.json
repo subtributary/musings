@@ -9,7 +9,7 @@
     "build": "npm run build:css"
   },
   "devDependencies": {
-    "@subtributary/drip": "^0.1.1",
+    "@subtributary/drip": "^0.2.0",
     "sass": "^1.77.0"
   }
 }

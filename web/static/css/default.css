@@ -169,11 +169,13 @@ dialog > footer.row, dialog > footer > .row {
   inline-size: 100%;
 }
 
-.sideways-lr .dropdown > button::after, .vertical-lr .dropdown > button::after {
+.sideways-lr .dropdown > button::after,
+.vertical-lr .dropdown > button::after {
   transform: rotate(270deg);
 }
 
-.sideways-rl .dropdown > button::after, .vertical-rl .dropdown > button::after {
+.sideways-rl .dropdown > button::after,
+.vertical-rl .dropdown > button::after {
   transform: rotate(90deg);
 }
 
