@@ -19,6 +19,7 @@ type ParsedPost struct {
 	Content   template.HTML
 	Published time.Time
 	Summary   string
+	Thumbnail string
 	Title     string
 }
 
@@ -86,6 +87,7 @@ func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
 		Content:   template.HTML(parsedContent),
 		Published: fm.PublishedTime(),
 		Summary:   summary,
+		Thumbnail: fm.Thumbnail,
 		Title:     getTitle(ctx),
 	}, nil
 }
@@ -94,6 +96,7 @@ type postFrontmatter struct {
 	Bylines   []string
 	Published string
 	Summary   string
+	Thumbnail string
 }
 
 // PublishedTime parses a time string in RFC3339 or a supported format.

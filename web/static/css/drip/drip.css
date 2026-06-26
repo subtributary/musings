@@ -105,8 +105,8 @@ dialog {
   color: var(--drip-color-text);
   padding: var(--drip-spacing);
   box-shadow: 1px 1px 2px #000;
-  inline-size: var(--drip-paragraph-size);
-  max-inline-size: 100%;
+  width: var(--drip-paragraph-size);
+  max-width: 100%;
 }
 dialog::backdrop {
   background-color: rgba(0, 0, 0, 0.67);
@@ -127,6 +127,13 @@ dialog > header > button[command=close] {
 }
 dialog > footer.row, dialog > footer > .row {
   margin-block-end: 0;
+}
+
+.sideways-lr dialog, .sideways-rl dialog, .vertical-lr dialog, .vertical-rl dialog {
+  width: fit-content;
+  max-width: unset;
+  height: var(--drip-paragraph-size);
+  max-height: 100%;
 }
 
 .dropdown {
@@ -166,7 +173,7 @@ dialog > footer.row, dialog > footer > .row {
   padding: var(--drip-spacing);
   box-shadow: 1px 1px 2px #000;
   position-area: end center;
-  inline-size: 100%;
+  width: 100%;
 }
 
 .sideways-lr .dropdown > button::after, .vertical-lr .dropdown > button::after {
@@ -181,7 +188,7 @@ table {
   border-collapse: collapse;
   margin-block-end: var(--drip-spacing);
   table-layout: fixed;
-  inline-size: 100%;
+  width: 100%;
 }
 
 table,
@@ -193,6 +200,11 @@ td {
 th,
 td {
   padding: var(--drip-padding);
+}
+
+.sideways-lr table, .sideways-rl table, .vertical-lr table, .vertical-rl table {
+  height: 100%;
+  width: fit-content;
 }
 
 dl,
@@ -218,11 +230,10 @@ h6 {
   line-height: var(--drip-text-line-height);
 }
 
-dl,
 ol,
 ul,
 p {
-  max-inline-size: var(--drip-paragraph-size);
+  max-width: var(--drip-paragraph-size);
 }
 
 ol ol,
@@ -255,6 +266,23 @@ ul > li > ul {
 }
 ul > li > ul > li > ul {
   list-style-type: square;
+}
+
+.sideways-lr dl,
+.sideways-lr ol,
+.sideways-lr ul,
+.sideways-lr p, .sideways-rl dl,
+.sideways-rl ol,
+.sideways-rl ul,
+.sideways-rl p, .vertical-lr dl,
+.vertical-lr ol,
+.vertical-lr ul,
+.vertical-lr p, .vertical-rl dl,
+.vertical-rl ol,
+.vertical-rl ul,
+.vertical-rl p {
+  max-height: var(--drip-paragraph-size);
+  max-width: fit-content;
 }
 
 a {
@@ -317,7 +345,7 @@ sup {
   width: auto;
 }
 
-.text-muted, .index-page article > .content > header > .metadata, .post-page .metadata {
+.text-muted {
   color: var(--drip-color-text-muted);
 }
 
@@ -328,7 +356,7 @@ sup {
 
 .container {
   margin-inline: auto;
-  max-inline-size: var(--drip-container-size);
+  max-width: var(--drip-container-size);
 }
 
 .row {
@@ -411,24 +439,29 @@ header > .container-full nav ul > li {
   writing-mode: vertical-rl;
 }
 
+.sideways-lr .container, .sideways-rl .container, .vertical-lr .container, .vertical-rl .container {
+  max-width: unset;
+  max-height: var(--drip-container-size);
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
   margin-block-end: var(--drip-spacing);
 }
 
-input:not([type=checkbox], [type=radio]) label {
+label {
   display: block;
 }
 
 button,
-input:not([type=checkbox], [type=radio]),
+input,
 meter,
 progress,
 select,
 textarea {
   display: block;
-  inline-size: 100%;
+  width: 100%;
 }
 
 input:not([type=file]),
@@ -460,6 +493,16 @@ button, input[type=button], input[type=reset], input[type=submit], input[type=fi
   }
 }
 
+input[type=checkbox],
+input[type=radio] {
+  display: inline;
+  width: revert;
+}
+input[type=checkbox] + label,
+input[type=radio] + label {
+  display: inline;
+}
+
 input[type=search] {
   background-image: var(--drip-icon-search);
   background-position: center left var(--drip-padding);
@@ -469,139 +512,77 @@ input[type=search] {
 }
 
 textarea {
-  min-block-size: 3em;
-  max-inline-size: 100%;
-  min-inline-size: 100%;
+  min-height: 3em;
+  max-width: 100%;
+  min-width: 100%;
 }
 
+.sideways-lr .dropdown > [popover],
+.sideways-rl .dropdown > [popover],
+.vertical-lr .dropdown > [popover],
+.vertical-rl .dropdown > [popover] {
+  height: 100%;
+  width: fit-content;
+}
 .sideways-lr input[type=search],
 .sideways-rl input[type=search],
 .vertical-lr input[type=search],
 .vertical-rl input[type=search] {
   background-position: center top var(--drip-padding);
 }
+.sideways-lr button,
+.sideways-lr input,
+.sideways-lr meter,
+.sideways-lr progress,
+.sideways-lr select,
+.sideways-lr textarea,
+.sideways-rl button,
+.sideways-rl input,
+.sideways-rl meter,
+.sideways-rl progress,
+.sideways-rl select,
+.sideways-rl textarea,
+.vertical-lr button,
+.vertical-lr input,
+.vertical-lr meter,
+.vertical-lr progress,
+.vertical-lr select,
+.vertical-lr textarea,
+.vertical-rl button,
+.vertical-rl input,
+.vertical-rl meter,
+.vertical-rl progress,
+.vertical-rl select,
+.vertical-rl textarea {
+  width: revert;
+  height: 100%;
+}
+.sideways-lr input[type=checkbox],
+.sideways-lr input[type=radio],
+.sideways-rl input[type=checkbox],
+.sideways-rl input[type=radio],
+.vertical-lr input[type=checkbox],
+.vertical-lr input[type=radio],
+.vertical-rl input[type=checkbox],
+.vertical-rl input[type=radio] {
+  height: revert;
+}
+.sideways-lr textarea,
+.sideways-rl textarea,
+.vertical-lr textarea,
+.vertical-rl textarea {
+  min-height: 100%;
+  max-height: 100%;
+  min-width: 3em;
+  max-width: revert;
+}
 
 html[dir=rtl] input[type=search] {
   background-position: center right var(--drip-padding);
 }
-html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[type=search], html[dir=rtl].vertical-lr input[type=search], html[dir=rtl].vertical-rl input[type=search] {
+html[dir=rtl] .sideways-lr input[type=search],
+html[dir=rtl] .sideways-rl input[type=search],
+html[dir=rtl] .vertical-lr input[type=search],
+html[dir=rtl] .vertical-rl input[type=search], html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[type=search], html[dir=rtl].vertical-lr input[type=search], html[dir=rtl].vertical-rl input[type=search] {
   background-position: center bottom var(--drip-padding);
-}
-
-@font-face {
-  font-family: "Noto Sans";
-  font-style: normal;
-  font-weight: 400;
-  src: url("/_static/fonts/noto/noto-sans-v42-latin-regular.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Noto Sans Arabic";
-  font-style: normal;
-  font-weight: 400;
-  src: url("/_static/fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Noto Sans Mongolian";
-  font-style: normal;
-  font-weight: 400;
-  src: url("/_static/fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2") format("woff2");
-}
-:root[lang=en], .script-en {
-  font-family: "Noto Sans", sans-serif;
-}
-
-:root[lang=ar], .script-ar {
-  font-family: "Noto Sans Arabic", sans-serif;
-}
-
-:root[lang=mn-Mong], .script-mn-Mong {
-  font-family: "Noto Sans Mongolian", sans-serif;
-}
-:root[lang=mn-Mong] h1, :root[lang=mn-Mong] h2, :root[lang=mn-Mong] h3, :root[lang=mn-Mong] h4, :root[lang=mn-Mong] h5, :root[lang=mn-Mong] h6, .script-mn-Mong h1, .script-mn-Mong h2, .script-mn-Mong h3, .script-mn-Mong h4, .script-mn-Mong h5, .script-mn-Mong h6 {
-  font-family: inherit;
-}
-
-#main-header {
-  border-block-end: 1px solid var(--drip-color-border);
-}
-#main-header .search-form {
-  flex: 1 1 auto;
-}
-
-#locales {
-  inset: auto;
-  inset-inline-end: anchor(end);
-  height: fit-content;
-  width: fit-content;
-}
-#locales a {
-  display: block;
-  padding: var(--drip-padding);
-}
-#locales a:visited {
-  color: var(--drip-color-link);
-}
-#locales li {
-  display: block;
-}
-#locales ul {
-  margin: 0;
-  padding: 0;
-}
-
-.index-page .article-link {
-  color: inherit;
-  overflow-wrap: normal;
-  text-decoration: none;
-  white-space: wrap;
-}
-.index-page .article-link h2 {
-  color: var(--drip-color-link);
-}
-.index-page .article-link:hover h2 {
-  text-decoration: underline;
-  text-underline-position: under;
-}
-.index-page .article-link:visited h2 {
-  color: var(--drip-color-link-visited);
-}
-.index-page article {
-  display: flex;
-  flex-wrap: wrap;
-  border: 1px solid var(--drip-color-border);
-  border-radius: var(--drip-padding);
-  background: var(--drip-color-border);
-  gap: 1px;
-  overflow: hidden;
-}
-.index-page article > .content {
-  background: var(--drip-color-background);
-  padding: var(--drip-spacing);
-  inline-size: 40ch;
-  flex: 1 1 40ch;
-}
-.index-page article > .content h2, .index-page article > .content p {
-  font-size: inherit;
-  line-height: inherit;
-  margin: 0;
-}
-.index-page article > .content > header > .metadata {
-  flex: 0 0 auto;
-}
-.index-page article > .thumbnail {
-  background: var(--drip-color-background);
-  flex: 1 1 auto;
-  inline-size: 15ch;
-}
-.index-page article > .thumbnail > img {
-  aspect-ratio: 1;
-  inline-size: 100%;
-}
-
-.post-page h1 {
-  margin: 0;
-}
-.post-page article > header {
-  border-block-end: 1px solid var(--drip-color-border);
-  padding-block-end: var(--drip-spacing);
 }

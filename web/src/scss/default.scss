@@ -2,21 +2,8 @@
 @use "drip/drip.scss";
 @use "fonts";
 
-.metadata {
-  @extend .text-muted;
-}
-
 #main-header {
   border-block-end: 1px solid var(--drip-color-border);
-
-  @media (prefers-reduced-motion: no-preference) {
-    transition: opacity var(--drip-animation-speed) ease;
-    //opacity: 0.5;
-
-    &:focus-within, &:hover {
-      opacity: 1.0;
-    }
-  }
 
   .search-form {
     flex: 1 1 auto;
@@ -47,27 +34,78 @@
 }
 
 .index-page {
-  .metadata {
-    flex: 0 0 auto;
+  // Link text style
+  .article-link {
+    color: inherit;
+    overflow-wrap: normal;
+    text-decoration: none;
+    white-space: wrap;
+
+    h2 {
+      color: var(--drip-color-link);
+    }
+
+    &:hover h2 {
+      text-decoration: underline;
+      text-underline-position: under;
+    }
+
+    &:visited h2 {
+      color: var(--drip-color-link-visited);
+    }
   }
 
   article {
+    display: flex;
+    flex-wrap: wrap;
     border: 1px solid var(--drip-color-border);
     border-radius: var(--drip-padding);
-    padding: var(--drip-padding);
-  }
 
-  h2 {
-    font-size: inherit;
-    line-height: inherit;
-    margin: 0;
+    // 1px gap for fake interior border
+    background: var(--drip-color-border);
+    gap: 1px;
+    overflow: hidden;
+
+    & > .content {
+      background: var(--drip-color-background);
+      padding: var(--drip-spacing);
+      inline-size: 40ch;
+      flex: 1 1 40ch;
+
+      h2, p {
+        font-size: inherit;
+        line-height: inherit;
+        margin: 0;
+      }
+
+      & > header > .metadata {
+        @extend .text-muted;
+        flex: 0 0 auto;
+      }
+    }
+
+    & > .thumbnail {
+      background: var(--drip-color-background);
+      flex: 1 1 auto;
+      inline-size: 15ch;
+
+      & > img {
+        aspect-ratio: 1;
+        inline-size: 100%;
+      }
+    }
   }
 }
 
 .post-page {
+  .metadata {
+    @extend .text-muted;
+  }
+
   h1 {
     margin: 0;
   }
+
   article > header {
     border-block-end: 1px solid var(--drip-color-border);
     padding-block-end: var(--drip-spacing);

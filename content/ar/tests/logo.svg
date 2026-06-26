@@ -1,26 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg width="400px" height="400px" viewBox="0 0 99 99" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="49" cy="49" r="49" fill="#ddd" />
+    <circle fill="#fff" cx="49" cy="49" r="49" />
 
-    <g fill="none" stroke="#16a">
+    <g fill="none" stroke="#07b">
         <circle cx="49" cy="49" r="44" stroke-width="10" stroke-dasharray="138.23 138.23" />
-        <circle cx="49" cy="49" r="42" stroke-width="6" stroke-dasharray="65.97 197.92" stroke-dashoffset="65.97" />
+        <circle cx="49" cy="49" r="42" stroke-width="6" stroke-dasharray="131.95" stroke-dashoffset="65.97" />
         <circle cx="49" cy="49" r="36" stroke-width="2" stroke-dasharray="56.55 169.64" stroke-dashoffset="56.55" />
     </g>
-    
-    <defs>
-        <rect id="b0" x="0" y="0" width="16" height="10" fill="#a61" rx="1" />
-        <rect id="b1" x="0" y="0" width="16" height="10" fill="#a61" rx="1" />
-    </defs>
 
-    <g>
-        <use href="#b0" x="22" y="53" />
-        <use href="#b0" x="42" y="53" />
-        <use href="#b0" x="62" y="53" />
+    <!-- interior boundary -->
+    <circle cx="49" cy="49" r="31" fill="none" stroke="none" stroke-width="2" />
 
-        <use href="#b1" x="32" y="39" />
-        <use href="#b1" x="52" y="39" />
-        
-        <use href="#b1" x="42" y="25" />
+    <g transform="translate(17,16) scale(2.6)">
+        <path fill="#fff" d="M21.2,9.46 l-1.421,1.42 l-5.66,-5.66 l1.421-1.42" />
+        <path fill="#333" d="M22.95,8.38 a.5.5 0 0 1-.277.848l-1.474.23-5.656-5.656.212-1.485a.5.5 0 0 1 .848-.283z"/>
+        <path fill="#333" d="M4.929 21.485l5.846-5.846a2 2 0 1 0-1.414-1.414l-5.846 5.846-1.06-1.06c2.827-3.3 3.888-6.954 5.302-13.082l6.364-.707 5.657 5.657-.707 6.364c-6.128 1.414-9.782 2.475-13.081 5.303l-1.061-1.06zM16.596 2.04l6.347 6.346"/>
     </g>
 </svg>

@@ -4,6 +4,7 @@ bylines:
   - ᠣᠷᠴᠢᠭᠤᠯᠤᠭᠰᠠᠨ Codex
 published: 2026-06-15
 summary: ᠡᠨᠡ ᠪᠢᠴᠢᠭ ᠨᠢ Musings ᠳᠠᠬᠢ ᠬᠤᠪᠢᠯᠪᠤᠷᠢᠲᠤ ᠬᠥᠷᠥᠩᠭᠡ ᠶᠢ ᠰᠢᠯᠭᠠᠬᠤ ᠳᠤ ᠵᠢᠷᠤᠭ ᠤᠳ ᠢ ᠠᠰᠢᠭᠯᠠᠳᠠᠭ.
+thumbnail: logo.svg
 ---
 # ᠵᠢᠷᠤᠭ ᠤᠳ
 
