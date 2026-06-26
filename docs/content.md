@@ -54,13 +54,13 @@ The `summary` field is a summary of the content.
 The default value is the first non-empty paragraph of the document.
 (Stand-alone images are considered paragraphs, and their alt text can be used.)
 
-The `thumbnail` field is an optional image to associate with the document.
-The value must be a relative path to an image in the content directory.
+The `thumbnail` field specifies an image to associate with the document.
+It must be a relative or absolute URL *path* to an image file hosted by Musings.
 The default index template shows this next to each listed document.
 
-The default index template sorts content by publication date.
-If a publication date is omitted for a document, that document is sorted above others that have a publication date.
-If a publication date is in the future, that document is not listed on the index.
+The default index template sorts content by most recent publication date then by title.
+If the publication date is omitted, the document is sorted after others that have a publication date.
+If the publication date is in the future, the document is not listed on the index.
 
 ### Plugins
 

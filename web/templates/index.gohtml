@@ -35,7 +35,7 @@
                     <header class="row">
                         <h2>{{.Title}}</h2>
                         <div class="metadata">
-                            {{if ne .Published nil}}
+                            {{if not .Published.IsZero}}
                                 {{$.FormatDate .Published}}
                             {{end}}
                         </div>

@@ -30,7 +30,7 @@ func TestIndex_List(t *testing.T) {
 
 	results := index.List()
 
-	wantIds := []string{"empty", "title", "12", "dec", "2", "1", "jan"}
+	wantIds := []string{"12", "dec", "2", "1", "jan", "empty", "title"}
 	gotIds := getIds(slices.Collect(results))
 	if !slices.Equal(wantIds, gotIds) {
 		t.Errorf("List() = %v, want %v", gotIds, wantIds)
