@@ -28,7 +28,7 @@
             <article>
                 <div class="thumbnail">
                     {{if ne (len .Thumbnail) 0}}
-                        <img alt="" src="{{.Thumbnail}}">
+                        <img alt="" src="{{.Thumbnail | versioned}}">
                     {{end}}
                 </div>
                 <div class="content">

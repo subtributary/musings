@@ -28,12 +28,17 @@ func main() {
 		log.Fatalf("Error: open static root: %v", err)
 	}
 
-	content, err := OpenContent(ContentPath, cfg.Locales)
+	contentRoot, err := os.OpenRoot(ContentPath)
+	if err != nil {
+		log.Fatalf("Error: open content root: %v", err)
+	}
+
+	content, err := OpenContent(contentRoot, cfg.Locales)
 	if err != nil {
 		log.Fatalf("Error: load content: %v", err)
 	}
 
-	responder, err := NewResponder(cfg.LiveTemplates, cfg.Locales, staticRoot)
+	responder, err := NewResponder(cfg.LiveTemplates, cfg.Locales, contentRoot, staticRoot)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

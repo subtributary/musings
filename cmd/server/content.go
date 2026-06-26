@@ -26,8 +26,10 @@ type Content struct {
 	parser   posts.Parser
 }
 
-func OpenContent(contentRoot string, locales []localization.Locale) (*Content, error) {
-	c := &Content{}
+func OpenContent(contentRoot *os.Root, locales []localization.Locale) (*Content, error) {
+	c := &Content{
+		root: contentRoot,
+	}
 
 	if len(locales) == 0 {
 		locales = []localization.Locale{localization.UndLocale}
@@ -41,17 +43,12 @@ func OpenContent(contentRoot string, locales []localization.Locale) (*Content, e
 
 	c.parser = posts.NewParser(c.ModTime)
 
-	root, err := os.OpenRoot(contentRoot)
-	if err != nil {
-		return nil, fmt.Errorf("open content root: %v", err)
-	}
-	c.root = root
-
-	c.monitor, err = monitor.New(c.dirty, root.FS(), contentRoot)
+	m, err := monitor.New(c.dirty, contentRoot.FS(), ContentPath)
 	if err != nil {
 		err = fmt.Errorf("new monitor: %v", err)
 		return nil, errors.Join(err, c.Close())
 	}
+	c.monitor = m
 
 	// The intitial call blocks.
 	err = c.monitor.AddDirectory(".")
@@ -79,11 +76,6 @@ func (c *Content) Close() (err error) {
 	if c.monitor != nil {
 		err = c.monitor.Close()
 		c.monitor = nil
-	}
-
-	if c.root != nil {
-		err = errors.Join(err, c.root.Close())
-		c.root = nil
 	}
 
 	return err

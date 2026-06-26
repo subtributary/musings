@@ -78,11 +78,12 @@ type ViewFactory struct {
 	translations  localization.Store
 }
 
-func NewViewFactory(liveTemplates bool, locales []localization.Locale, staticRoot *os.Root) (*ViewFactory, error) {
+func NewViewFactory(liveTemplates bool, locales []localization.Locale, contentRoot *os.Root, staticRoot *os.Root) (*ViewFactory, error) {
 	f := &ViewFactory{locales: locales}
 
 	funcs := templates.Funcs{
-		StaticDir: staticRoot.FS(),
+		ContentDir: contentRoot.FS(),
+		StaticDir:  staticRoot.FS(),
 	}
 
 	templateStore, err := templates.NewStore(TemplatesPath, funcs, liveTemplates)

@@ -38,7 +38,7 @@ func WithStat(stat StatFunc) Option {
 type Monitor struct {
 	dirty    DirtyFunc
 	root     fs.FS
-	rootPath string
+	rootPath string // watcher needs this since its path is relative to cd.
 	watcher  Watcher
 	stat     func(string) (fs.FileInfo, error)
 }
