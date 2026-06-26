@@ -30,14 +30,10 @@ const (
 type IndexedPost struct {
 	Path      string
 	Bylines   []string
-	Published *time.Time
+	Published time.Time
 	Summary   string
 	Thumbnail string
 	Title     string
-}
-
-func (p IndexedPost) isPublished(now time.Time) bool {
-	return p.Published == nil || !p.Published.After(now)
 }
 
 type Index struct {
@@ -105,8 +101,7 @@ func (idx *Index) List() iter.Seq[IndexedPost] {
 
 	slices.SortFunc(results, func(a, b IndexedPost) int {
 		// compareTimes parameters are reversed to sort descending.
-		// This also causes nil times to be sorted before non-nil times.
-		if c := compareTimes(b.Published, a.Published); c != 0 {
+		if c := b.Published.Compare(a.Published); c != 0 {
 			return c
 		}
 		if c := cmp.Compare(a.Title, b.Title); c != 0 {
@@ -119,7 +114,7 @@ func (idx *Index) List() iter.Seq[IndexedPost] {
 
 	return func(yield func(p IndexedPost) bool) {
 		for _, post := range results {
-			if !post.isPublished(now) {
+			if post.Published.After(now) {
 				continue
 			}
 			if !yield(post) {
@@ -174,7 +169,7 @@ func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 	return func(yield func(p IndexedPost) bool) {
 		for _, result := range scores {
 			post := docToPost(result.Document)
-			if !post.isPublished(now) {
+			if post.Published.After(now) {
 				continue
 			}
 			if !yield(post) {
@@ -226,24 +221,7 @@ func docToPost(doc *bm25f.Document) (p IndexedPost) {
 	_ = json.Unmarshal([]byte(bylinesStr), &p.Bylines)
 
 	publishedStr, _ := doc.Metadata(metadataPublished)
-	if published, err := time.Parse(time.RFC3339, publishedStr); err == nil {
-		p.Published = &published
-	}
+	p.Published, _ = time.Parse(time.RFC3339, publishedStr)
 
 	return p
-}
-
-// compareTimes is like time.Time.Compare but handles nil times.
-// Nil times are treated as occurring after non-Nil times.
-func compareTimes(a *time.Time, b *time.Time) int {
-	switch {
-	case a == nil && b == nil:
-		return 0
-	case a == nil:
-		return 1
-	case b == nil:
-		return -1
-	default:
-		return a.Compare(*b)
-	}
 }

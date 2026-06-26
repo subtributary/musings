@@ -29,12 +29,14 @@ Musings adds plugin support and metadata to the format.
 ### Metadata
 
 Metadata can be added in a frontmatter block.
+All metadata fields are optional.
 
 ```markdown
 ---
 bylines: [by Nathan Belue]
 published: 2026-04-30
 summary: Example summary text.
+thumbnail: image.jpg
 ---
 # Title
 
@@ -52,9 +54,13 @@ The `summary` field is a summary of the content.
 The default value is the first non-empty paragraph of the document.
 (Stand-alone images are considered paragraphs, and their alt text can be used.)
 
-By default, content is sorted by publication date on the index.
-If a publication date is omitted for a document, that document is sorted above others that have a publication date.
-If a publication date is in the future, that document is not listed on the index.
+The `thumbnail` field specifies an image to associate with the document.
+It must be a relative or absolute URL *path* to an image file hosted by Musings.
+The default index template shows this next to each listed document.
+
+The default index template sorts content by most recent publication date then by title.
+If the publication date is omitted, the document is sorted after others that have a publication date.
+If the publication date is in the future, the document is not listed on the index.
 
 ### Plugins
 

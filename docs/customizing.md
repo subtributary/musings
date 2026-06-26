@@ -4,6 +4,9 @@ The frontend of Musings can be customized, but it is a technical process not mea
 If end user customization is required, a user-friendly tool complete with sanitization should be used.
 This document details the technical process of customizing Musings.
 
+Note that "post" is used herein as a synonym of "document" that is used elsewhere in the Musings documentation.
+This is to more closely mirror the language used in the code.
+
 ## Customization areas
 
 Customization is performed by modifying files within the repository or deployment.
@@ -100,8 +103,9 @@ The view model's `Data` property is a `SearchResult` with this structure:
 type IndexedPost struct {
     Path      string
     Bylines   []string
-    Published *time.Time
+    Published time.Time
     Summary   string
+    Thumbnail string
     Title     string
 }
 
@@ -113,7 +117,7 @@ type SearchResults struct {
 
 When not responding to a search,
 the posts in the view model are sorted by publication date with the most recent one first.
-Posts with no publication date are listed first, sorted by title then path.
+Posts with a zero publication date are listed last, sorted by title then path.
 Posts with a future publication date are omitted.
 
 When responding to a search,
@@ -144,6 +148,7 @@ type ParsedPost struct {
     Content   template.HTML
     Published time.Time
     Summary   string
+	Thumbnail string
     Title     string
 }
 ```

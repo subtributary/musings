@@ -20,7 +20,7 @@
                 {{range .Data.Bylines}}
                     {{.}}<br>
                 {{end}}
-                {{if ne .Data.Published nil}}
+                {{if not .Data.Published.IsZero}}
                     {{.Translations.Get "published"}}
                     {{$.FormatDate .Data.Published}}<br>
                 {{end}}
