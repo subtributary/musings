@@ -102,6 +102,7 @@ type IndexedPost struct {
     Bylines   []string
     Published *time.Time
     Summary   string
+    Thumbnail string
     Title     string
 }
 
@@ -144,6 +145,7 @@ type ParsedPost struct {
     Content   template.HTML
     Published time.Time
     Summary   string
+	Thumbnail string
     Title     string
 }
 ```
