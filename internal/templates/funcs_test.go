@@ -15,31 +15,34 @@ func TestFuncs_Versioned(t *testing.T) {
 
 	modTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	funcs := templates.Funcs{
+		ContentDir: fstest.MapFS{
+			"post.md": {Data: []byte(""), ModTime: modTime},
+		},
 		StaticDir: fstest.MapFS{
 			"js/script.js": {Data: []byte(""), ModTime: modTime},
 		},
 	}
 
 	t.Run("without versioned the URL is unchanged", func(t *testing.T) {
-		got, err := render(t, funcs, `<script src="/_static/js/script.js"></script>`)
+		got, err := render(t, funcs, `{{"/_static/js/script.js"}}`)
 		if err != nil {
 			t.Fatalf("Execute() error = %v", err)
 		}
 
-		want := `<script src="/_static/js/script.js"></script>`
+		want := `/_static/js/script.js`
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
 	})
 
 	t.Run("with versioned the version is appended", func(t *testing.T) {
-		got, err := render(t, funcs, `<script src='{{"/_static/js/script.js" | versioned}}'></script>`)
+		got, err := render(t, funcs, `{{"/_static/js/script.js" | versioned}}`)
 		if err != nil {
 			t.Fatalf("Execute() error = %v", err)
 		}
 
 		version := strconv.FormatInt(modTime.Unix(), 16)
-		want := `<script src='/_static/js/script.js?v=` + version + `'></script>`
+		want := `/_static/js/script.js?v=` + version
 		if got != want {
 			t.Errorf("got %q, want %q", got, want)
 		}
@@ -49,6 +52,19 @@ func TestFuncs_Versioned(t *testing.T) {
 		_, err := render(t, funcs, `{{"/_static/js/missing.js" | versioned}}`)
 		if err == nil {
 			t.Fatal("Execute(): want error, got nil")
+		}
+	})
+
+	t.Run("look in content when no static prefix", func(t *testing.T) {
+		got, err := render(t, funcs, `{{"/post.md" | versioned}}`)
+		if err != nil {
+			t.Fatalf("Execute() error = %v", err)
+		}
+
+		version := strconv.FormatInt(modTime.Unix(), 16)
+		want := "/post.md?v=" + version
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
 		}
 	})
 }

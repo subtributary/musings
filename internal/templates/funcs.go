@@ -1,17 +1,18 @@
 package templates
 
 import (
-	"errors"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Funcs struct {
-	StaticDir fs.FS
+	ContentDir fs.FS
+	StaticDir  fs.FS
 }
 
 func (f Funcs) ApplyTo(t *template.Template) {
@@ -21,22 +22,11 @@ func (f Funcs) ApplyTo(t *template.Template) {
 }
 
 func (f Funcs) versioned(assetURL string) (template.URL, error) {
-	if f.StaticDir == nil {
-		return "", errors.New("static dir is not defined")
-	}
-
-	// Get the modified time from the file.
-	assetPath, ok := strings.CutPrefix(assetURL, "/_static/")
-	if !ok {
-		return "", errors.New("URL is not to a static asset")
-	}
-	info, err := fs.Stat(f.StaticDir, assetPath)
+	modified, err := f.modified(assetURL)
 	if err != nil {
-		return "", fmt.Errorf("stat asset: %w", err)
+		return "", err
 	}
-	modified := info.ModTime()
 
-	// Append the modified time to the URL.
 	parsedURL, err := url.Parse(assetURL)
 	if err != nil {
 		return "", fmt.Errorf("parse URL: %w", err)
@@ -47,4 +37,22 @@ func (f Funcs) versioned(assetURL string) (template.URL, error) {
 	parsedURL.RawQuery = query.Encode()
 
 	return template.URL(parsedURL.String()), nil
+}
+
+func (f Funcs) modified(name string) (time.Time, error) {
+	var dir fs.FS
+	if strings.HasPrefix(name, "/_static/") {
+		dir = f.StaticDir
+		name, _ = strings.CutPrefix(name, "/_static/")
+	} else {
+		dir = f.ContentDir
+		name, _ = strings.CutPrefix(name, "/")
+	}
+
+	info, err := fs.Stat(dir, name)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("stat asset: %w", err)
+	}
+
+	return info.ModTime(), nil
 }

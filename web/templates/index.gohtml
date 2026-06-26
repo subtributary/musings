@@ -24,20 +24,26 @@
     {{end}}
 
     {{range .Data.Results}}
-        <article>
-            <header class="row">
-                <h2>{{.Title}}</h2>
-                <div class="metadata">
-                    {{if ne .Published nil}}
-                        {{$.FormatDate .Published}}
+        <a href="{{.Path}}" class="article-link">
+            <article>
+                <div class="thumbnail">
+                    {{if ne (len .Thumbnail) 0}}
+                        <img alt="" src="{{.Thumbnail | versioned}}">
                     {{end}}
                 </div>
-            </header>
-            <p>{{.Summary}}</p>
-            <footer>
-                <a href="{{.Path}}">{{$.Translations.Get "Continue reading..."}}</a>
-            </footer>
-        </article>
+                <div class="content">
+                    <header class="row">
+                        <h2>{{.Title}}</h2>
+                        <div class="metadata">
+                            {{if ne .Published nil}}
+                                {{$.FormatDate .Published}}
+                            {{end}}
+                        </div>
+                    </header>
+                    <p>{{.Summary}}</p>
+                </div>
+            </article>
+        </a>
     {{end}}
 </main>
 

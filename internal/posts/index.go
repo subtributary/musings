@@ -23,6 +23,7 @@ const (
 	metadataPath      = "path"
 	metadataPublished = "published"
 	metadataSummary   = "summary"
+	metadataThumbnail = "thumbnail"
 	metadataTitle     = "title"
 )
 
@@ -31,6 +32,7 @@ type IndexedPost struct {
 	Bylines   []string
 	Published *time.Time
 	Summary   string
+	Thumbnail string
 	Title     string
 }
 
@@ -183,17 +185,22 @@ func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 }
 
 // Upsert adds a post to the index.
-func (idx *Index) Upsert(path string, post ParsedPost) {
-	routePath := strings.TrimSuffix(path, ".md")
-	title := idx.tokenizer.Tokens(post.Title)
+func (idx *Index) Upsert(name string, post ParsedPost) {
+	routePath := strings.TrimSuffix(name, ".md")
+
+	bylines, _ := json.Marshal(post.Bylines)
 	content := idx.tokenizer.Tokens(string(post.Content))
+	title := idx.tokenizer.Tokens(post.Title)
 
 	var published string
 	if !post.Published.IsZero() {
 		published = post.Published.Format(time.RFC3339)
 	}
 
-	bylines, _ := json.Marshal(post.Bylines)
+	var thumbnail string
+	if post.Thumbnail != "" {
+		thumbnail = path.Join(path.Dir(name), post.Thumbnail)
+	}
 
 	idx.corpus.Upsert(routePath, bm25f.NewDocument(
 		bm25f.WithField(fieldTitle, title),
@@ -202,6 +209,7 @@ func (idx *Index) Upsert(path string, post ParsedPost) {
 		bm25f.WithMetadata(metadataPath, routePath),
 		bm25f.WithMetadata(metadataPublished, published),
 		bm25f.WithMetadata(metadataSummary, post.Summary),
+		bm25f.WithMetadata(metadataThumbnail, thumbnail),
 		bm25f.WithMetadata(metadataTitle, post.Title),
 	))
 }
@@ -211,6 +219,7 @@ func (idx *Index) Upsert(path string, post ParsedPost) {
 func docToPost(doc *bm25f.Document) (p IndexedPost) {
 	p.Path, _ = doc.Metadata(metadataPath)
 	p.Summary, _ = doc.Metadata(metadataSummary)
+	p.Thumbnail, _ = doc.Metadata(metadataThumbnail)
 	p.Title, _ = doc.Metadata(metadataTitle)
 
 	bylinesStr, _ := doc.Metadata(metadataBylines)
