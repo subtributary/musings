@@ -519,9 +519,6 @@ html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[ty
 :root[lang=mn-Mong], .script-mn-Mong {
   font-family: "Noto Sans Mongolian", sans-serif;
 }
-:root[lang=mn-Mong] h1, :root[lang=mn-Mong] h2, :root[lang=mn-Mong] h3, :root[lang=mn-Mong] h4, :root[lang=mn-Mong] h5, :root[lang=mn-Mong] h6, .script-mn-Mong h1, .script-mn-Mong h2, .script-mn-Mong h3, .script-mn-Mong h4, .script-mn-Mong h5, .script-mn-Mong h6 {
-  font-family: inherit;
-}
 
 #main-header {
   border-block-end: 1px solid var(--drip-color-border);
@@ -600,8 +597,8 @@ html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[ty
   inline-size: 100%;
 }
 
-.post-page h1 {
-  margin: 0;
+.post-page h2 {
+  border-block-end: 1px solid var(--drip-color-border);
 }
 .post-page article > header {
   border-block-end: 1px solid var(--drip-color-border);

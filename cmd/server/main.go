@@ -81,6 +81,7 @@ func main() {
 	err = server.Shutdown(stopCtx) // Shutdown server before closing deps.
 	err = errors.Join(err, content.Close())
 	err = errors.Join(err, staticRoot.Close())
+	err = errors.Join(err, contentRoot.Close())
 	if err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
 	}
