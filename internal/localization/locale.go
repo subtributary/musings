@@ -102,11 +102,3 @@ func (loc *Locale) UnmarshalJSON(data []byte) error {
 	*loc = Locale(cfg.Alias)
 	return nil
 }
-
-func normalizeTag(input string) (string, error) {
-	tag, err := language.Parse(input)
-	if err != nil {
-		return "", fmt.Errorf("parse tag %s: %w", input, err)
-	}
-	return tag.String(), nil
-}

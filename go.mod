@@ -4,7 +4,7 @@ go 1.25.9
 
 require (
 	github.com/clipperhouse/uax29/v2 v2.7.0
-	github.com/computerghost/bm25f v0.5.0
+	github.com/computerghost/bm25f v1.0.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-chi/chi/v5 v5.3.0
 	github.com/yuin/goldmark v1.8.2
