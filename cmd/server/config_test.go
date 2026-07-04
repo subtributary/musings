@@ -22,8 +22,7 @@ func TestArgsParser(t *testing.T) {
 			args: []string{},
 			env:  map[string]string{},
 			want: ConfigArgs{
-				BindAddress:   ":8080",
-				LiveTemplates: false,
+				BindAddress: ":8080",
 			},
 		},
 		{
@@ -33,28 +32,25 @@ func TestArgsParser(t *testing.T) {
 				"MUSINGS_BIND": ":1",
 			},
 			want: ConfigArgs{
-				BindAddress:   ":1",
-				LiveTemplates: false,
+				BindAddress: ":1",
 			},
 		},
 		{
 			name: "command arguments",
-			args: []string{"--bind", ":2", "--live-templates"},
+			args: []string{"--bind", ":2"},
 			env:  map[string]string{},
 			want: ConfigArgs{
-				BindAddress:   ":2",
-				LiveTemplates: true,
+				BindAddress: ":2",
 			},
 		},
 		{
 			name: "command arguments override environment variables",
-			args: []string{"--bind", ":2", "--live-templates"},
+			args: []string{"--bind", ":2"},
 			env: map[string]string{
 				"MUSINGS_BIND": ":1",
 			},
 			want: ConfigArgs{
-				BindAddress:   ":2",
-				LiveTemplates: true,
+				BindAddress: ":2",
 			},
 		},
 	}
@@ -72,9 +68,6 @@ func TestArgsParser(t *testing.T) {
 
 			if cfg.BindAddress != tt.want.BindAddress {
 				t.Errorf("BindAddress = %v, want %v", cfg.BindAddress, tt.want.BindAddress)
-			}
-			if cfg.LiveTemplates != tt.want.LiveTemplates {
-				t.Fatalf("LiveTemplates = %v, want %v", cfg.LiveTemplates, tt.want.LiveTemplates)
 			}
 		})
 	}

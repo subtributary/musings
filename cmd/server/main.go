@@ -38,7 +38,7 @@ func main() {
 		log.Fatalf("Error: load content: %v", err)
 	}
 
-	responder, err := NewResponder(cfg.LiveTemplates, cfg.Locales, contentRoot, staticRoot)
+	responder, err := NewResponder(cfg.Locales, contentRoot, staticRoot)
 	if err != nil {
 		log.Fatalf("Error: %v", err)
 	}

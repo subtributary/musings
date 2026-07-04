@@ -17,12 +17,10 @@ const (
 	DataPath           = "./data/"
 	DefaultBindAddress = ":8080"
 	StaticPath         = "./web/static/"
-	TemplatesPath      = "./web/templates/"
 )
 
 type ConfigArgs struct {
-	BindAddress   string
-	LiveTemplates bool
+	BindAddress string
 }
 
 type ConfigFile struct {
@@ -95,7 +93,6 @@ func (p ArgsParser) Parse(args []string) (ConfigArgs, error) {
 
 	var fs flag.FlagSet
 	fs.StringVar(&cfg.BindAddress, "bind", cfg.BindAddress, "")
-	fs.BoolVar(&cfg.LiveTemplates, "live-templates", false, "")
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {}
 
@@ -125,5 +122,4 @@ func (p ArgsParser) printUsage() {
 	_, _ = fmt.Fprintln(p.Stdout)
 	_, _ = fmt.Fprintln(p.Stdout, "Options:")
 	_, _ = fmt.Fprintf(p.Stdout, "  --bind <address>  Web endpoint to listen at. [default: %s]\n", DefaultBindAddress)
-	_, _ = fmt.Fprintln(p.Stdout, "  --live-templates  Reload templates for every request.")
 }

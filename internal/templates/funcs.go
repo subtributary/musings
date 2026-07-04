@@ -11,8 +11,8 @@ import (
 )
 
 type Funcs struct {
-	ContentDir fs.FS
-	StaticDir  fs.FS
+	ContentFS fs.FS
+	StaticFS  fs.FS
 }
 
 func (f Funcs) ApplyTo(t *template.Template) {
@@ -42,10 +42,10 @@ func (f Funcs) versioned(assetURL string) (template.URL, error) {
 func (f Funcs) modified(name string) (time.Time, error) {
 	var dir fs.FS
 	if strings.HasPrefix(name, "/_static/") {
-		dir = f.StaticDir
+		dir = f.StaticFS
 		name, _ = strings.CutPrefix(name, "/_static/")
 	} else {
-		dir = f.ContentDir
+		dir = f.ContentFS
 		name, _ = strings.CutPrefix(name, "/")
 	}
 

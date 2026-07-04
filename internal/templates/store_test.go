@@ -3,12 +3,15 @@ package templates_test
 import (
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/subtributary/musings/internal/templates"
 )
 
-func TestCachedStore(t *testing.T) {
-	files := fstest.MapFS{
+func TestStore(t *testing.T) {
+	contentFS := fstest.MapFS{}
+	staticFS := fstest.MapFS{}
+	templateFS := fstest.MapFS{
 		"index.gohtml": {
 			Data: []byte(`Hello, {{.Name}}! {{template "partials/footer" .}}`),
 		},
@@ -26,6 +29,7 @@ func TestCachedStore(t *testing.T) {
 	tests := []struct {
 		name    string
 		target  string
+		modTime time.Time
 		wantErr bool
 	}{
 		{
@@ -55,29 +59,15 @@ func TestCachedStore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := templates.NewCachedStore(templates.Funcs{})
-			if err := store.LoadFS(files); err != nil {
-				t.Fatalf("LoadFS() error = %v", err)
+			store, err := templates.NewStore(templateFS, contentFS, staticFS)
+			if err != nil {
+				t.Fatalf("NewStore() error = %v", err)
 			}
 
-			_, err := store.Lookup(tt.target)
+			_, err = store.Lookup(tt.target)
 			if tt.wantErr && err == nil {
 				t.Fatalf("Lookup(): want error, got nil")
 			}
-			if err != nil {
-				return
-			}
 		})
-	}
-}
-
-func TestCachedStore_ParseError(t *testing.T) {
-	files := fstest.MapFS{
-		"bad.gohtml": {Data: []byte(`{{if}}`)},
-	}
-
-	store := templates.NewCachedStore(templates.Funcs{})
-	if err := store.LoadFS(files); err == nil {
-		t.Fatal("LoadFS() error = nil, want parse error")
 	}
 }

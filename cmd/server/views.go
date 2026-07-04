@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"embed"
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +16,9 @@ import (
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/templates"
 )
+
+//go:embed templates/*
+var templateFiles embed.FS
 
 type LocaleOption struct {
 	localization.Locale
@@ -65,26 +70,25 @@ func (v *View) Serve(w http.ResponseWriter) error {
 }
 
 type ViewFactory struct {
-	locales       []localization.Locale
-	templateStore templates.Store
-	translations  localization.Store
+	locales      []localization.Locale
+	templates    templates.Store
+	translations localization.Store
 }
 
-func NewViewFactory(liveTemplates bool, locales []localization.Locale, contentRoot *os.Root, staticRoot *os.Root) (*ViewFactory, error) {
+func NewViewFactory(locales []localization.Locale, contentRoot *os.Root, staticRoot *os.Root) (*ViewFactory, error) {
 	f := &ViewFactory{locales: locales}
 
-	funcs := templates.Funcs{
-		ContentDir: contentRoot.FS(),
-		StaticDir:  staticRoot.FS(),
+	templatesFS, err := fs.Sub(templateFiles, "templates")
+	if err != nil {
+		return nil, fmt.Errorf("open templates dir: %w", err)
 	}
-
-	templateStore, err := templates.NewStore(TemplatesPath, funcs, liveTemplates)
+	templates, err := templates.NewStore(templatesFS, contentRoot.FS(), staticRoot.FS())
 	if err != nil {
 		return nil, fmt.Errorf("load templates: %w", err)
 	}
-	f.templateStore = templateStore
+	f.templates = templates
 
-	translations, err := localization.NewStore(DataPath, liveTemplates)
+	translations, err := localization.NewStore(DataPath)
 	if err != nil {
 		return nil, fmt.Errorf("load translations: %w", err)
 	}
@@ -112,7 +116,7 @@ func (f *ViewFactory) Create(r *http.Request, name string) (*View, error) {
 }
 
 func (f *ViewFactory) createView(name string) (*View, error) {
-	tmpl, err := f.templateStore.Lookup(name)
+	tmpl, err := f.templates.Lookup(name)
 	if err != nil {
 		return nil, fmt.Errorf("load template: %w", err)
 	}

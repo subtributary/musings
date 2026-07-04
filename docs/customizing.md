@@ -15,7 +15,7 @@ The following areas are intended to be customized:
 - Styles ("web/src/scss/" and "web/static/css/")
 - Scripts ("web/src/ts/" and "web/static/js/")
 - Other static assets ("web/static/\<type\>")
-- Templates ("web/templates/")
+- Templates ("cmd/server/templates/")
 
 Other areas of the codebase should be considered internal and should not be edited per deployment.
 
@@ -157,7 +157,7 @@ type ParsedPost struct {
 
 Partial templates to support the main templates are in the "templates/partials" directory.
 A partial's name is its file name without the extension and with "partials/" prefixed;
-for example, "/templates/partials/head.gohtml" is named "partials/head".
+for example, "templates/partials/head.gohtml" is named "partials/head".
 The name is used to include the partial in another template.
 
 The view model for a partial is whatever is passed to it from another template.

@@ -1,6 +1,7 @@
 package templates_test
 
 import (
+	"html/template"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,10 +16,10 @@ func TestFuncs_Versioned(t *testing.T) {
 
 	modTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	funcs := templates.Funcs{
-		ContentDir: fstest.MapFS{
+		ContentFS: fstest.MapFS{
 			"post.md": {Data: []byte(""), ModTime: modTime},
 		},
-		StaticDir: fstest.MapFS{
+		StaticFS: fstest.MapFS{
 			"js/script.js": {Data: []byte(""), ModTime: modTime},
 		},
 	}
@@ -73,18 +74,14 @@ func TestFuncs_Versioned(t *testing.T) {
 func render(t *testing.T, funcs templates.Funcs, body string) (string, error) {
 	t.Helper()
 
-	store := templates.NewCachedStore(funcs)
-	err := store.LoadFS(fstest.MapFS{"page.gohtml": {Data: []byte(body)}})
-	if err != nil {
-		t.Fatalf("LoadFS() error = %v", err)
-	}
+	tmpl := template.New("")
+	funcs.ApplyTo(tmpl)
 
-	tmpl, err := store.Lookup("page")
-	if err != nil {
-		t.Fatalf("Lookup() error = %v", err)
+	if _, err := tmpl.Parse(body); err != nil {
+		t.Fatalf("Parse() error = %v", err)
 	}
 
 	var sb strings.Builder
-	err = tmpl.Execute(&sb, nil)
+	err := tmpl.Execute(&sb, nil)
 	return sb.String(), err
 }

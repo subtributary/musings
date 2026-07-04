@@ -2,7 +2,6 @@ package localization
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -18,50 +17,23 @@ func (t Translations) Get(key string) string {
 	return key
 }
 
-type Store interface {
-	For(locale Locale) (Translations, error)
-}
+type Store map[string]Translations
 
 // NewStore creates a new translations store.
-// If `live` is true, the translations are reloaded on every request.
-func NewStore(dataDir string, live bool) (Store, error) {
+func NewStore(dataDir string) (Store, error) {
 	filename := filepath.Join(dataDir, "translations.json")
-	if live {
-		return LiveStore{filename: filename}, nil
-	}
-	return loadCachedStore(filename)
-}
-
-// CachedStore keeps and uses an in-memory copy of the translations.
-type CachedStore map[string]Translations
-
-func loadCachedStore(filename string) (CachedStore, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	var store CachedStore
+	var store Store
 	if err = json.Unmarshal(data, &store); err != nil {
 		return nil, err
 	}
 	return store, nil
 }
 
-func (s CachedStore) For(locale Locale) (Translations, error) {
+func (s Store) For(locale Locale) (Translations, error) {
 	return s[locale.Tag], nil
-}
-
-// LiveStore reloads the translations every time they are requested.
-type LiveStore struct {
-	filename string
-}
-
-func (s LiveStore) For(locale Locale) (Translations, error) {
-	store, err := loadCachedStore(s.filename)
-	if err != nil {
-		return nil, fmt.Errorf("load store: %w", err)
-	}
-
-	return store.For(locale)
 }

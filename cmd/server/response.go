@@ -13,8 +13,8 @@ type Responder struct {
 	views *ViewFactory
 }
 
-func NewResponder(liveTemplates bool, locales []localization.Locale, contentRoot *os.Root, staticRoot *os.Root) (Responder, error) {
-	views, err := NewViewFactory(liveTemplates, locales, contentRoot, staticRoot)
+func NewResponder(locales []localization.Locale, contentRoot *os.Root, staticRoot *os.Root) (Responder, error) {
+	views, err := NewViewFactory(locales, contentRoot, staticRoot)
 	if err != nil {
 		return Responder{}, fmt.Errorf("new view factory: %w", err)
 	}
