@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,12 +34,11 @@ func (vm ViewModel) FormatDate(when time.Time) string {
 }
 
 type View struct {
-	modified time.Time
-	model    ViewModel
-	tmpl     templates.Template
+	model ViewModel
+	tmpl  *template.Template
 }
 
-func (v *View) SetData(data any, dataModified time.Time) error {
+func (v *View) SetData(data any) error {
 	if v.model.Data != nil {
 		// Setting data twice may leave dateModified in a bad state,
 		// so we do not allow it.
@@ -46,10 +46,6 @@ func (v *View) SetData(data any, dataModified time.Time) error {
 	}
 
 	v.model.Data = data
-
-	if dataModified.After(v.modified) {
-		v.modified = dataModified
-	}
 
 	return nil
 }
@@ -61,11 +57,7 @@ func (v *View) Serve(w http.ResponseWriter) error {
 		return fmt.Errorf("execute template: %w", err)
 	}
 
-	// The `Last-Modified` header only has seconds precision.
-	modified := v.modified.UTC().Truncate(time.Second)
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Last-Modified", modified.Format(http.TimeFormat))
 	if _, err := buf.WriteTo(w); err != nil {
 		return fmt.Errorf("write response: %w", err)
 	}
@@ -126,8 +118,7 @@ func (f *ViewFactory) createView(name string) (*View, error) {
 	}
 
 	return &View{
-		modified: tmpl.LastModified(),
-		tmpl:     tmpl,
+		tmpl: tmpl,
 	}, nil
 }
 

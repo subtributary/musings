@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/subtributary/musings/internal/localization"
 )
@@ -51,9 +50,9 @@ func (resp *Responder) ServerError(w http.ResponseWriter, err error) {
 
 type ViewOption func(*View) error
 
-func WithData(data any, modified time.Time) ViewOption {
+func WithData(data any) ViewOption {
 	return func(v *View) error {
-		return v.SetData(data, modified)
+		return v.SetData(data)
 	}
 }
 

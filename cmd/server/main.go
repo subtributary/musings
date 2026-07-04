@@ -93,16 +93,13 @@ func contentHandler(response Responder, content *Content) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		reqPath, _ := strings.CutPrefix(r.URL.Path, "/")
 
-		modTime, ok := content.ModTime(reqPath)
-
 		// If ok, it is a regular file and not a post.
-		if ok {
+		if _, ok := content.ModTime(reqPath); ok {
 			response.File(w, r, content.root, reqPath)
 			return
 		}
 
-		modTime, ok = content.ModTime(reqPath + ".md")
-		if !ok {
+		if _, ok := content.ModTime(reqPath + ".md"); !ok {
 			response.NotFound(w, r)
 			return
 		}
@@ -112,7 +109,7 @@ func contentHandler(response Responder, content *Content) http.HandlerFunc {
 			response.NotFound(w, r)
 		}
 
-		response.View(w, r, "post", WithData(post, modTime))
+		response.View(w, r, "post", WithData(post))
 	}
 }
 
@@ -128,6 +125,6 @@ func indexHandler(response Responder, content *Content) http.HandlerFunc {
 		locale := localization.LocaleFromContext(r.Context())
 		query := r.URL.Query().Get("q")
 		results := content.Search(locale, query)
-		response.View(w, r, "index", WithData(results, time.Now()))
+		response.View(w, r, "index", WithData(results))
 	}
 }

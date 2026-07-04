@@ -7,12 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type CachedStore struct {
 	templates *template.Template
-	modTime   time.Time
 }
 
 func NewCachedStore(funcs Funcs) *CachedStore {
@@ -48,13 +46,6 @@ func (s *CachedStore) LoadFS(dir fs.FS) error {
 			return nil
 		}
 
-		// Update modTime if template file is newer.
-		if info, err := d.Info(); err != nil {
-			return fmt.Errorf("file info: %w", err)
-		} else if modTime := info.ModTime(); modTime.After(s.modTime) {
-			s.modTime = modTime
-		}
-
 		// Template name is just its path minus its extension
 		name := strings.TrimSuffix(path, ".gohtml")
 
@@ -71,10 +62,9 @@ func (s *CachedStore) LoadFS(dir fs.FS) error {
 	})
 }
 
-func (s *CachedStore) Lookup(name string) (tmpl Template, err error) {
-	tmpl.lastModified = s.modTime
-	tmpl.wrapped = s.templates.Lookup(name)
-	if tmpl.wrapped == nil {
+func (s *CachedStore) Lookup(name string) (tmpl *template.Template, err error) {
+	tmpl = s.templates.Lookup(name)
+	if tmpl == nil {
 		err = fmt.Errorf("template not found: %s", name)
 	}
 	return

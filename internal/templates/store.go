@@ -1,7 +1,9 @@
 package templates
 
+import "html/template"
+
 type Store interface {
-	Lookup(name string) (Template, error)
+	Lookup(name string) (*template.Template, error)
 }
 
 func NewStore(rootPath string, funcs Funcs, live bool) (Store, error) {
