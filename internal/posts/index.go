@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"iter"
 	"path"
 	"slices"
@@ -45,53 +44,19 @@ type Index struct {
 // NewIndex creates an empty index ready to be populated.
 // Once the initial population is done, call MakeThreadSafe.
 func NewIndex() *Index {
-	s := &Index{
-		ranker:    bm25f.New(),
+	ranker := bm25f.New()
+	// Errors are ignored because they only happen for weight < 0.
+	_ = ranker.SetWeight(fieldTitle, 5.0)
+	_ = ranker.SetWeight(fieldContent, 1.0)
+
+	return &Index{
+		ranker:    ranker,
 		corpus:    bm25f.NewSimpleCorpus(),
 		tokenizer: tokens.NewDefaultTokenizer(),
 	}
-
-	// Errors are ignored because they only happen for weight < 0.
-	_ = s.ranker.SetWeight(fieldTitle, 5.0)
-	_ = s.ranker.SetWeight(fieldContent, 1.0)
-
-	return s
 }
 
-// BuildIndex builds an entirely new index.
-func BuildIndex(contentRoot fs.FS) (*Index, error) {
-	index := NewIndex()
-
-	// Ignore modtime of linked assets because it isn't needed for indexing.
-	modTime := func(string) (_ time.Time, _ bool) { return }
-	parser := NewParser(modTime)
-
-	err := fs.WalkDir(contentRoot, ".", func(filePath string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !d.Type().IsRegular() || path.Ext(d.Name()) != ".md" {
-			return nil
-		}
-
-		post, err := parser.ParseFile(contentRoot, filePath)
-		if err != nil {
-			return fmt.Errorf("parse post %q: %w", filePath, err)
-		}
-
-		index.Upsert(filePath, post)
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return index, nil
-}
-
-// List lists all posts in order of publication with the most recent one first.
+// List lists all posts in descending order of publication date.
 // Posts with publication dates in the future are omitted.
 func (idx *Index) List() iter.Seq[IndexedPost] {
 	var results []IndexedPost
@@ -138,8 +103,8 @@ func (idx *Index) MakeConcurrent() error {
 }
 
 // Remove removes a post from the index.
-func (idx *Index) Remove(path string) {
-	idx.corpus.Remove(path)
+func (idx *Index) Remove(name string) {
+	idx.corpus.Remove(name)
 }
 
 // Search returns the posts matching the query,
@@ -210,7 +175,7 @@ func (idx *Index) Upsert(name string, post ParsedPost) {
 }
 
 // docToPost converts a bm25f.Document to an IndexedPost.
-// Missing or malformed metadata is degrated to zero values.
+// Missing or malformed metadata is degraded to zero values.
 func docToPost(doc *bm25f.Document) (p IndexedPost) {
 	p.Path, _ = doc.Metadata(metadataPath)
 	p.Summary, _ = doc.Metadata(metadataSummary)

@@ -32,7 +32,7 @@
   }
 }
 
-.index-page {
+.article-index {
   // Link text style
   .article-link {
     color: inherit;
@@ -96,7 +96,7 @@
   }
 }
 
-.post-page {
+.full-post {
   .metadata {
     @extend .text-muted;
   }

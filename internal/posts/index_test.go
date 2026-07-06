@@ -1,9 +1,13 @@
 package posts_test
 
 import (
+	"fmt"
+	"io/fs"
+	"path"
 	"slices"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/subtributary/musings/internal/posts"
 )
@@ -23,7 +27,7 @@ func TestIndex_List(t *testing.T) {
 		"ignored":   {Data: []byte("")},
 	}
 
-	index, err := posts.BuildIndex(files)
+	index, err := buildIndex(files)
 	if err != nil {
 		t.Fatalf("Error building index: %v", err)
 	}
@@ -49,7 +53,7 @@ func TestIndex_Search(t *testing.T) {
 		"ignored":   {Data: []byte("---\npublished: 2025-01-03\n---\n# Jan 3")},
 	}
 
-	index, err := posts.BuildIndex(files)
+	index, err := buildIndex(files)
 	if err != nil {
 		t.Fatalf("Error building index: %v", err)
 	}
@@ -61,6 +65,38 @@ func TestIndex_Search(t *testing.T) {
 	if !slices.Equal(wantIds, gotIds) {
 		t.Errorf("List() = %v, want %v", gotIds, wantIds)
 	}
+}
+
+func buildIndex(contentFS fs.FS) (*posts.Index, error) {
+	index := posts.NewIndex()
+
+	// Ignore modtime of linked assets because it isn't needed for indexing.
+	modTime := func(string) (_ time.Time, _ bool) { return }
+	parser := posts.NewParser(modTime)
+
+	err := fs.WalkDir(contentFS, ".", func(filePath string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.Type().IsRegular() || path.Ext(d.Name()) != ".md" {
+			return nil
+		}
+
+		post, err := parser.ParseFile(contentFS, filePath)
+		if err != nil {
+			return fmt.Errorf("parse post %q: %w", filePath, err)
+		}
+
+		index.Upsert(filePath, post)
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return index, nil
 }
 
 func getIds(indexedPosts []posts.IndexedPost) []string {

@@ -4,9 +4,9 @@
   "private": true,
   "description": "Build pipeline for SCSS (and optional JS/TS later)",
   "scripts": {
-    "build:css": "sass --load-path=node_modules web/src/scss:web/static/css --no-source-map",
-    "build:watch": "sass --watch --load-path=node_modules web/src/scss:web/static/css --no-source-map",
-    "build": "npm run build:css"
+    "build:server:css": "sass --load-path=node_modules cmd/server/web-src/scss:cmd/server/web/_css --no-source-map",
+    "build:server": "npm run build:server:css",
+    "build": "npm run build:server"
   },
   "devDependencies": {
     "@subtributary/drip": "^0.2.0",

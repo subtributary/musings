@@ -1,0 +1,19 @@
+{{define "title"}}{{.Data.Title}} | Musings{{end}}
+{{define "content"}}
+    <article class="full-post">
+        <header>
+            <h1>{{.Data.Title}}</h1>
+            <div class="metadata">
+                {{range .Data.Bylines}}
+                    {{.}}<br>
+                {{end}}
+                {{if not .Data.Published.IsZero}}
+                    {{.Translations.Get "published"}}
+                    {{$.FormatDate .Data.Published}}<br>
+                {{end}}
+            </div>
+        </header>
+
+        {{.Data.Content}}
+    </article>
+{{end}}

@@ -16,7 +16,6 @@ const (
 	ContentPath        = "./content/"
 	DataPath           = "./data/"
 	DefaultBindAddress = ":8080"
-	StaticPath         = "./web/static/"
 )
 
 type ConfigArgs struct {
@@ -24,6 +23,7 @@ type ConfigArgs struct {
 }
 
 type ConfigFile struct {
+	// todo: default this to [Und] if not set.
 	Locales []localization.Locale `json:"locales"`
 }
 

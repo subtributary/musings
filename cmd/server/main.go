@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"embed"
 	"errors"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -14,7 +18,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/subtributary/musings/internal/localization"
+	"github.com/subtributary/musings/internal/posts"
+	"github.com/subtributary/musings/internal/web"
 )
+
+//go:embed all:web
+var webFiles embed.FS
 
 func main() {
 	cfg, err := LoadConfig()
@@ -23,33 +32,25 @@ func main() {
 		return
 	}
 
-	staticRoot, err := os.OpenRoot(StaticPath)
+	templates, err := LoadTemplates()
 	if err != nil {
-		log.Fatalf("Error: open static root: %v", err)
+		log.Fatalf("Error: load templates: %v", err)
 	}
 
-	contentRoot, err := os.OpenRoot(ContentPath)
+	webFS, err := fs.Sub(webFiles, "web")
 	if err != nil {
-		log.Fatalf("Error: open content root: %v", err)
-	}
-
-	content, err := OpenContent(contentRoot, cfg.Locales)
-	if err != nil {
-		log.Fatalf("Error: load content: %v", err)
-	}
-
-	responder, err := NewResponder(cfg.Locales, contentRoot, staticRoot)
-	if err != nil {
-		log.Fatalf("Error: %v", err)
+		log.Fatal(err)
 	}
 
 	router := chi.NewRouter()
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
-	router.Get("/", indexHandler(responder, content))
-	router.Get("/_static/*", fileHandler("/_static/", responder, staticRoot))
-	router.Get("/*", contentHandler(responder, content))
+	router.Get("/", indexHandler(templates, cfg.Locales))
+	router.Handle("/_css/*", http.FileServerFS(webFS))
+	router.Handle("/_fonts/*", http.FileServerFS(webFS))
+	router.Handle("/_images/*", http.FileServerFS(webFS))
+	router.Get("/*", contentHandler(templates, cfg.Locales))
 
 	server := &http.Server{Addr: cfg.BindAddress, Handler: router}
 	serverErr := make(chan error, 1)
@@ -79,9 +80,6 @@ func main() {
 	stopCtx, stopStop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stopStop()
 	err = server.Shutdown(stopCtx) // Shutdown server before closing deps.
-	err = errors.Join(err, content.Close())
-	err = errors.Join(err, staticRoot.Close())
-	err = errors.Join(err, contentRoot.Close())
 	if err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
 	}
@@ -89,42 +87,87 @@ func main() {
 	log.Printf("Server stopped.")
 }
 
-func contentHandler(response Responder, content *Content) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		reqPath, _ := strings.CutPrefix(r.URL.Path, "/")
+func contentHandler(templates Templates, locales []localization.Locale) http.HandlerFunc {
+	contentRoot, err := os.OpenRoot(ContentPath)
+	if err != nil {
+		log.Fatalf("Error: open content root: %v", err)
+	}
 
-		// If ok, it is a regular file and not a post.
-		if _, ok := content.ModTime(reqPath); ok {
-			response.File(w, r, content.root, reqPath)
-			return
-		}
-
-		if _, ok := content.ModTime(reqPath + ".md"); !ok {
-			response.NotFound(w, r)
-			return
-		}
-
-		post, err := content.GetPost(reqPath + ".md")
+	modTime := func(name string) (time.Time, bool) {
+		info, err := contentRoot.Stat(name)
 		if err != nil {
-			response.NotFound(w, r)
+			return time.Time{}, false
+		}
+		return info.ModTime(), true
+	}
+	parser := posts.NewParser(modTime)
+
+	vmFactory, err := NewModelViewFactory(locales)
+	if err != nil {
+		log.Fatalf("Error: create view model factory: %v", err)
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		response := web.NewResponse(w, r)
+		filePath, _ := strings.CutPrefix(r.URL.Path, "/")
+
+		// If no error, it is a regular file and not a post.
+		if _, err := contentRoot.Stat(filePath); err == nil {
+			response.File(contentRoot, filePath)
+			return
 		}
 
-		response.View(w, r, "post", WithData(post))
+		if _, err := contentRoot.Stat(filePath + ".md"); err != nil {
+			response.NotFound(templates.Err404, vmFactory.Create(r, nil))
+			return
+		}
+
+		post, err := parser.ParseFile(contentRoot.FS(), filePath+".md")
+		if err != nil {
+			response.ServerError(err)
+			return
+		}
+
+		response.View(templates.Post, vmFactory.Create(r, post))
 	}
 }
 
-func fileHandler(prefix string, response Responder, root *os.Root) http.HandlerFunc {
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		response.File(w, r, root, r.URL.Path)
-	})
-	return http.StripPrefix(prefix, handler).ServeHTTP
+type SearchResults struct {
+	Query   string
+	Results []posts.IndexedPost
 }
 
-func indexHandler(response Responder, content *Content) http.HandlerFunc {
+func indexHandler(templates Templates, locales []localization.Locale) http.HandlerFunc {
+	vmFactory, err := NewModelViewFactory(locales)
+	if err != nil {
+		log.Fatalf("Error: create view model factory: %v", err)
+	}
+
+	if len(locales) == 0 {
+		locales = []localization.Locale{localization.UndLocale}
+	}
+
+	indexes := make(map[string]posts.AutoIndex, len(locales))
+	for _, loc := range locales {
+		indexRoot := path.Join(ContentPath, loc.Tag)
+		index, err := posts.NewAutoIndex(indexRoot)
+		if err != nil {
+			log.Fatalf("Error: load indexes: %v", err)
+		}
+		indexes[loc.Tag] = index
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
-		locale := localization.LocaleFromContext(r.Context())
+		reqLocale := localization.LocaleFromContext(r.Context())
+
+		index := indexes[reqLocale.Tag]
 		query := r.URL.Query().Get("q")
-		results := content.Search(locale, query)
-		response.View(w, r, "index", WithData(results))
+		results := slices.Collect(index.Search(query))
+
+		response := web.NewResponse(w, r)
+		response.View(templates.Index, vmFactory.Create(r, SearchResults{
+			Query:   query,
+			Results: results,
+		}))
 	}
 }

@@ -34,6 +34,6 @@ func NewStore(dataDir string) (Store, error) {
 	return store, nil
 }
 
-func (s Store) For(locale Locale) (Translations, error) {
-	return s[locale.Tag], nil
+func (s Store) For(locale Locale) Translations {
+	return s[locale.Tag]
 }
