@@ -4,13 +4,17 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"fmt"
+	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -22,8 +26,83 @@ import (
 	"github.com/subtributary/musings/internal/web"
 )
 
+//go:embed all:templates
+var templateFiles embed.FS
+
 //go:embed all:web
 var webFiles embed.FS
+
+// Dependencies are shared by multiple routes or require closing.
+type Dependencies struct {
+	ContentRoot *os.Root
+	ViewModels  *ViewModelFactory
+	WebFS       fs.FS
+
+	Err404Template *template.Template
+	IndexTemplate  *template.Template
+	PostTemplate   *template.Template
+}
+
+func LoadDependencies(cfg Config) (*Dependencies, error) {
+	deps := &Dependencies{}
+
+	templateFS, err := fs.Sub(templateFiles, "templates")
+	if err != nil {
+		return nil, fmt.Errorf("sub embedded template dir: %w", err)
+	}
+
+	deps.WebFS, err = fs.Sub(webFiles, "web")
+	if err != nil {
+		return nil, fmt.Errorf("sub embedded web files: %w", err)
+	}
+
+	deps.ContentRoot, err = os.OpenRoot(ContentPath)
+	if err != nil {
+		return nil, fmt.Errorf("open content root: %w", err)
+	}
+
+	deps.ViewModels, err = NewModelViewFactory(cfg.Locales)
+	if err != nil {
+		return nil, fmt.Errorf("create view model factory: %v", err)
+	}
+
+	deps.Err404Template, err = template.ParseFS(templateFS, "*.gohtml")
+	if err != nil {
+		return nil, fmt.Errorf("load 404 template parts: %w", err)
+	}
+	_, err = deps.Err404Template.ParseFS(templateFS, "pages/404.gohtml")
+	if err != nil {
+		return nil, fmt.Errorf("load 404 template: %w", err)
+	}
+	deps.Err404Template = deps.Err404Template.Lookup("layout.gohtml")
+
+	deps.IndexTemplate, err = template.ParseFS(templateFS, "*.gohtml")
+	if err != nil {
+		return nil, fmt.Errorf("load index template parts: %w", err)
+	}
+	_, err = deps.IndexTemplate.ParseFS(templateFS, "pages/index.gohtml")
+	if err != nil {
+		return nil, fmt.Errorf("load index template: %w", err)
+	}
+	deps.IndexTemplate = deps.IndexTemplate.Lookup("layout.gohtml")
+
+	deps.PostTemplate, err = template.ParseFS(templateFS, "*.gohtml")
+	if err != nil {
+		return nil, fmt.Errorf("load post template parts: %w", err)
+	}
+	_, err = deps.PostTemplate.ParseFS(templateFS, "pages/post.gohtml")
+	if err != nil {
+		return nil, fmt.Errorf("load post template: %w", err)
+	}
+	deps.PostTemplate = deps.PostTemplate.Lookup("layout.gohtml")
+
+	return deps, nil
+}
+
+func (d *Dependencies) Close() error {
+	err := d.ContentRoot.Close()
+	return err
+}
 
 func main() {
 	cfg, err := LoadConfig()
@@ -32,25 +111,20 @@ func main() {
 		return
 	}
 
-	templates, err := LoadTemplates()
+	deps, err := LoadDependencies(cfg)
 	if err != nil {
-		log.Fatalf("Error: load templates: %v", err)
-	}
-
-	webFS, err := fs.Sub(webFiles, "web")
-	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Error: load deps: %v", err)
 	}
 
 	router := chi.NewRouter()
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
-	router.Get("/", indexHandler(templates, cfg.Locales))
-	router.Handle("/_css/*", http.FileServerFS(webFS))
-	router.Handle("/_fonts/*", http.FileServerFS(webFS))
-	router.Handle("/_images/*", http.FileServerFS(webFS))
-	router.Get("/*", contentHandler(templates, cfg.Locales))
+	router.Get("/", indexHandler(deps, cfg.Locales))
+	router.Handle("/_css/*", http.FileServerFS(deps.WebFS))
+	router.Handle("/_fonts/*", http.FileServerFS(deps.WebFS))
+	router.Handle("/_images/*", http.FileServerFS(deps.WebFS))
+	router.Get("/*", contentHandler(deps))
 
 	server := &http.Server{Addr: cfg.BindAddress, Handler: router}
 	serverErr := make(chan error, 1)
@@ -80,6 +154,7 @@ func main() {
 	stopCtx, stopStop := context.WithTimeout(context.Background(), 5*time.Second)
 	defer stopStop()
 	err = server.Shutdown(stopCtx) // Shutdown server before closing deps.
+	err = errors.Join(err, deps.Close())
 	if err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
 	}
@@ -87,14 +162,9 @@ func main() {
 	log.Printf("Server stopped.")
 }
 
-func contentHandler(templates Templates, locales []localization.Locale) http.HandlerFunc {
-	contentRoot, err := os.OpenRoot(ContentPath)
-	if err != nil {
-		log.Fatalf("Error: open content root: %v", err)
-	}
-
+func contentHandler(deps *Dependencies) http.HandlerFunc {
 	modTime := func(name string) (time.Time, bool) {
-		info, err := contentRoot.Stat(name)
+		info, err := deps.ContentRoot.Stat(name)
 		if err != nil {
 			return time.Time{}, false
 		}
@@ -102,33 +172,28 @@ func contentHandler(templates Templates, locales []localization.Locale) http.Han
 	}
 	parser := posts.NewParser(modTime)
 
-	vmFactory, err := NewModelViewFactory(locales)
-	if err != nil {
-		log.Fatalf("Error: create view model factory: %v", err)
-	}
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		response := web.NewResponse(w, r)
 		filePath, _ := strings.CutPrefix(r.URL.Path, "/")
 
 		// If no error, it is a regular file and not a post.
-		if _, err := contentRoot.Stat(filePath); err == nil {
-			response.File(contentRoot, filePath)
+		if _, err := deps.ContentRoot.Stat(filePath); err == nil {
+			response.File(deps.ContentRoot, filePath)
 			return
 		}
 
-		if _, err := contentRoot.Stat(filePath + ".md"); err != nil {
-			response.NotFound(templates.Err404, vmFactory.Create(r, nil))
+		if _, err := deps.ContentRoot.Stat(filePath + ".md"); err != nil {
+			response.NotFound(deps.Err404Template, deps.ViewModels.Create(r, nil))
 			return
 		}
 
-		post, err := parser.ParseFile(contentRoot.FS(), filePath+".md")
+		post, err := parser.ParseFile(deps.ContentRoot.FS(), filePath+".md")
 		if err != nil {
 			response.ServerError(err)
 			return
 		}
 
-		response.View(templates.Post, vmFactory.Create(r, post))
+		response.View(deps.PostTemplate, deps.ViewModels.Create(r, post))
 	}
 }
 
@@ -137,12 +202,7 @@ type SearchResults struct {
 	Results []posts.IndexedPost
 }
 
-func indexHandler(templates Templates, locales []localization.Locale) http.HandlerFunc {
-	vmFactory, err := NewModelViewFactory(locales)
-	if err != nil {
-		log.Fatalf("Error: create view model factory: %v", err)
-	}
-
+func indexHandler(deps *Dependencies, locales []localization.Locale) http.HandlerFunc {
 	if len(locales) == 0 {
 		locales = []localization.Locale{localization.UndLocale}
 	}
@@ -164,10 +224,33 @@ func indexHandler(templates Templates, locales []localization.Locale) http.Handl
 		query := r.URL.Query().Get("q")
 		results := slices.Collect(index.Search(query))
 
+		// Add cache breaker to thumbnails.
+		for _, result := range results {
+			result.Thumbnail = version(deps.ContentRoot, result.Thumbnail)
+		}
+
 		response := web.NewResponse(w, r)
-		response.View(templates.Index, vmFactory.Create(r, SearchResults{
+		response.View(deps.IndexTemplate, deps.ViewModels.Create(r, SearchResults{
 			Query:   query,
 			Results: results,
 		}))
 	}
+}
+
+func version(contentRoot *os.Root, contentURL string) string {
+	parsed, err := url.Parse(contentURL)
+	if err != nil || parsed.IsAbs() {
+		return contentURL
+	}
+
+	info, err := contentRoot.Stat(parsed.Path)
+	if err != nil {
+		return contentURL
+	}
+
+	query := parsed.Query()
+	query.Set("v", strconv.FormatInt(info.ModTime().Unix(), 16))
+	parsed.RawQuery = query.Encode()
+
+	return parsed.String()
 }
