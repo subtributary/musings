@@ -1,10 +1,7 @@
 package posts
 
 import (
-	"net/url"
 	"path"
-	"strconv"
-	"strings"
 
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
@@ -22,10 +19,13 @@ func setName(pc parser.Context, name string) {
 	pc.Set(nameKey, name)
 }
 
+// VersionURLFunc returns a cache-breaking version of a local URL.
+type VersionURLFunc func(currentPath, target string) string
+
 // versionAssetsTransformer appends a version string to the query string of any
 // link or image that points to a local asset, if their modified time is set.
 type versionAssetsTransformer struct {
-	modTime ModTimeFunc
+	versionURL VersionURLFunc
 }
 
 func (t *versionAssetsTransformer) Transform(doc *ast.Document, _ text.Reader, pc parser.Context) {
@@ -52,36 +52,10 @@ func (t *versionAssetsTransformer) Transform(doc *ast.Document, _ text.Reader, p
 
 // versionAssetURL appends a version timestamp if the modified time is set.
 func (t *versionAssetsTransformer) versionAssetURL(pc parser.Context, dest []byte) []byte {
-	assetURL, err := url.Parse(string(dest))
-	if err != nil {
-		return dest // Not a URL we can work with; leave it alone.
-	}
-	if assetURL.IsAbs() || assetURL.Host != "" {
-		return dest
-	}
+	targetURL := string(dest)
 
-	postPath, ok := getName(pc)
-	if !ok {
-		return dest
-	}
+	postPath, _ := getName(pc)
+	postPath = path.Dir(postPath)
 
-	assetPath := t.resolveAssetPath(postPath, assetURL)
-	when, ok := t.modTime(assetPath)
-	if !ok {
-		return dest
-	}
-
-	query := assetURL.Query()
-	query.Set("v", strconv.FormatInt(when.Unix(), 16))
-	assetURL.RawQuery = query.Encode()
-
-	return []byte(assetURL.String())
-}
-
-func (t *versionAssetsTransformer) resolveAssetPath(postPath string, assetURL *url.URL) string {
-	if strings.HasPrefix(assetURL.Path, "/") {
-		return assetURL.Path
-	}
-
-	return "/" + path.Join(path.Dir(postPath), assetURL.Path)
+	return []byte(t.versionURL(postPath, targetURL))
 }

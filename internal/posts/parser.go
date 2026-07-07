@@ -27,11 +27,7 @@ type Parser struct {
 	docParser goldmark.Markdown
 }
 
-// ModTimeFunc returns the modification time of a file. The `name` argument
-// will be a path relative to the content directory and prefixed with a '/'.
-type ModTimeFunc func(name string) (time.Time, bool)
-
-func NewParser(modTime ModTimeFunc) Parser {
+func NewParser(versionURL VersionURLFunc) Parser {
 	p := Parser{}
 
 	p.docParser = goldmark.New(
@@ -42,7 +38,7 @@ func NewParser(modTime ModTimeFunc) Parser {
 			parser.WithASTTransformers(
 				util.Prioritized(&removeH1Transformer{}, 0),
 				util.Prioritized(&summaryTransformer{}, 50),
-				util.Prioritized(&versionAssetsTransformer{modTime: modTime}, 100),
+				util.Prioritized(&versionAssetsTransformer{versionURL: versionURL}, 100),
 			),
 		),
 	)
@@ -50,31 +46,31 @@ func NewParser(modTime ModTimeFunc) Parser {
 	return p
 }
 
-func (s Parser) ParseFile(dir fs.FS, name string) (ParsedPost, error) {
+func (s Parser) ParseFile(dir fs.FS, name string) (*ParsedPost, error) {
 	name, _ = strings.CutPrefix(name, "/")
 
 	content, err := fs.ReadFile(dir, name)
 	if err != nil {
-		return ParsedPost{}, fmt.Errorf("read file: %w", err)
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	return s.ParseContent(name, content)
 }
 
-func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
+func (s Parser) ParseContent(name string, content []byte) (*ParsedPost, error) {
 	ctx := parser.NewContext()
 	setName(ctx, name)
 
 	var buf bytes.Buffer
 	err := s.docParser.Convert(content, &buf, parser.WithContext(ctx))
 	if err != nil {
-		return ParsedPost{}, fmt.Errorf("parse content: %w", err)
+		return nil, fmt.Errorf("parse content: %w", err)
 	}
 	parsedContent := string(buf.Bytes())
 
 	fm, err := parseFrontmatter(ctx)
 	if err != nil {
-		return ParsedPost{}, fmt.Errorf("parse frontmatter: %w", err)
+		return nil, fmt.Errorf("parse frontmatter: %w", err)
 	}
 
 	summary := getSummary(ctx)
@@ -82,7 +78,7 @@ func (s Parser) ParseContent(name string, content []byte) (ParsedPost, error) {
 		summary = fm.Summary
 	}
 
-	return ParsedPost{
+	return &ParsedPost{
 		Bylines:   fm.Bylines,
 		Content:   template.HTML(parsedContent),
 		Published: fm.PublishedTime(),
@@ -114,9 +110,15 @@ func (fm *postFrontmatter) PublishedTime() time.Time {
 	return time.Time{}
 }
 
-func parseFrontmatter(context parser.Context) (result postFrontmatter, err error) {
-	if fm := frontmatter.Get(context); fm != nil {
-		err = fm.Decode(&result)
+func parseFrontmatter(context parser.Context) (*postFrontmatter, error) {
+	fm := frontmatter.Get(context)
+	if fm == nil {
+		return &postFrontmatter{}, nil
 	}
-	return
+
+	result := &postFrontmatter{}
+	if err := fm.Decode(&result); err != nil {
+		return nil, err
+	}
+	return result, nil
 }

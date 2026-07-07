@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
-	"path"
 	"slices"
 	"strings"
 	"time"
@@ -19,7 +18,7 @@ const (
 	fieldContent = "content"
 
 	metadataBylines   = "bylines"
-	metadataPath      = "path"
+	metadataPath      = "url"
 	metadataPublished = "published"
 	metadataSummary   = "summary"
 	metadataThumbnail = "thumbnail"
@@ -58,13 +57,13 @@ func NewIndex() *Index {
 
 // List lists all posts in descending order of publication date.
 // Posts with publication dates in the future are omitted.
-func (idx *Index) List() iter.Seq[IndexedPost] {
-	var results []IndexedPost
+func (idx *Index) List() iter.Seq[*IndexedPost] {
+	var results []*IndexedPost
 	for _, doc := range idx.corpus.Documents() {
 		results = append(results, docToPost(doc))
 	}
 
-	slices.SortFunc(results, func(a, b IndexedPost) int {
+	slices.SortFunc(results, func(a, b *IndexedPost) int {
 		// compareTimes parameters are reversed to sort descending.
 		if c := b.Published.Compare(a.Published); c != 0 {
 			return c
@@ -77,7 +76,7 @@ func (idx *Index) List() iter.Seq[IndexedPost] {
 
 	now := time.Now()
 
-	return func(yield func(p IndexedPost) bool) {
+	return func(yield func(p *IndexedPost) bool) {
 		for _, post := range results {
 			if post.Published.After(now) {
 				continue
@@ -110,7 +109,7 @@ func (idx *Index) Remove(name string) {
 // Search returns the posts matching the query,
 // sorted by match score with the best match first.
 // Posts with publication dates in the future are omitted.
-func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
+func (idx *Index) Search(query string) iter.Seq[*IndexedPost] {
 	if strings.TrimSpace(query) == "" {
 		return idx.List()
 	}
@@ -131,7 +130,7 @@ func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 
 	now := time.Now()
 
-	return func(yield func(p IndexedPost) bool) {
+	return func(yield func(p *IndexedPost) bool) {
 		for _, result := range scores {
 			post := docToPost(result.Document)
 			if post.Published.After(now) {
@@ -145,7 +144,7 @@ func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 }
 
 // Upsert adds a post to the index.
-func (idx *Index) Upsert(name string, post ParsedPost) {
+func (idx *Index) Upsert(name string, post *ParsedPost) {
 	routePath := strings.TrimSuffix(name, ".md")
 
 	bylines, _ := json.Marshal(post.Bylines)
@@ -157,11 +156,6 @@ func (idx *Index) Upsert(name string, post ParsedPost) {
 		published = post.Published.Format(time.RFC3339)
 	}
 
-	var thumbnail string
-	if post.Thumbnail != "" {
-		thumbnail = path.Join(path.Dir(name), post.Thumbnail)
-	}
-
 	idx.corpus.Upsert(routePath, bm25f.NewDocument(
 		bm25f.WithField(fieldTitle, title),
 		bm25f.WithField(fieldContent, content),
@@ -169,14 +163,16 @@ func (idx *Index) Upsert(name string, post ParsedPost) {
 		bm25f.WithMetadata(metadataPath, routePath),
 		bm25f.WithMetadata(metadataPublished, published),
 		bm25f.WithMetadata(metadataSummary, post.Summary),
-		bm25f.WithMetadata(metadataThumbnail, thumbnail),
+		bm25f.WithMetadata(metadataThumbnail, post.Thumbnail),
 		bm25f.WithMetadata(metadataTitle, post.Title),
 	))
 }
 
 // docToPost converts a bm25f.Document to an IndexedPost.
 // Missing or malformed metadata is degraded to zero values.
-func docToPost(doc *bm25f.Document) (p IndexedPost) {
+func docToPost(doc *bm25f.Document) *IndexedPost {
+	p := &IndexedPost{}
+
 	p.Path, _ = doc.Metadata(metadataPath)
 	p.Summary, _ = doc.Metadata(metadataSummary)
 	p.Thumbnail, _ = doc.Metadata(metadataThumbnail)

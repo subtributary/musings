@@ -7,7 +7,6 @@ import (
 	"slices"
 	"testing"
 	"testing/fstest"
-	"time"
 
 	"github.com/subtributary/musings/internal/posts"
 )
@@ -70,9 +69,8 @@ func TestIndex_Search(t *testing.T) {
 func buildIndex(contentFS fs.FS) (*posts.Index, error) {
 	index := posts.NewIndex()
 
-	// Ignore modtime of linked assets because it isn't needed for indexing.
-	modTime := func(string) (_ time.Time, _ bool) { return }
-	parser := posts.NewParser(modTime)
+	versionURL := func(_, name string) string { return name }
+	parser := posts.NewParser(versionURL)
 
 	err := fs.WalkDir(contentFS, ".", func(filePath string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -99,7 +97,7 @@ func buildIndex(contentFS fs.FS) (*posts.Index, error) {
 	return index, nil
 }
 
-func getIds(indexedPosts []posts.IndexedPost) []string {
+func getIds(indexedPosts []*posts.IndexedPost) []string {
 	var results []string
 	for _, p := range indexedPosts {
 		results = append(results, p.Path)

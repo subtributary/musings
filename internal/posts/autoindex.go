@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -23,11 +22,11 @@ type AutoIndex struct {
 }
 
 func NewAutoIndex(rootPath string) (AutoIndex, error) {
-	// Accurate modtime not needed for searching.
-	modTime := func(string) (time.Time, bool) { return time.Time{}, false }
+	// URL versioning is not needed for searching, so use an identity function.
+	versionURL := func(_, target string) string { return target }
 
 	idx := AutoIndex{
-		parser:   NewParser(modTime),
+		parser:   NewParser(versionURL),
 		rootPath: rootPath,
 		wrapped:  NewIndex(),
 	}
@@ -53,14 +52,14 @@ func (idx AutoIndex) Close() error {
 
 // List lists all posts in descending order of publication date.
 // Posts with publication dates in the future are omitted.
-func (idx AutoIndex) List() iter.Seq[IndexedPost] {
+func (idx AutoIndex) List() iter.Seq[*IndexedPost] {
 	return idx.wrapped.List()
 }
 
 // Search returns the posts matching the query,
 // sorted by match score with the best match first.
 // Posts with publication dates in the future are omitted.
-func (idx AutoIndex) Search(query string) iter.Seq[IndexedPost] {
+func (idx AutoIndex) Search(query string) iter.Seq[*IndexedPost] {
 	return idx.wrapped.Search(query)
 }
 

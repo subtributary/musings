@@ -9,12 +9,9 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"path"
-	"slices"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -163,14 +160,10 @@ func main() {
 }
 
 func contentHandler(deps *Dependencies) http.HandlerFunc {
-	modTime := func(name string) (time.Time, bool) {
-		info, err := deps.ContentRoot.Stat(name)
-		if err != nil {
-			return time.Time{}, false
-		}
-		return info.ModTime(), true
+	versionURL := func(currentPath, target string) string {
+		return web.VersionURL(deps.ContentRoot, currentPath, target)
 	}
-	parser := posts.NewParser(modTime)
+	parser := posts.NewParser(versionURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		response := web.NewResponse(w, r)
@@ -199,7 +192,7 @@ func contentHandler(deps *Dependencies) http.HandlerFunc {
 
 type SearchResults struct {
 	Query   string
-	Results []posts.IndexedPost
+	Results []*posts.IndexedPost
 }
 
 func indexHandler(deps *Dependencies, locales []localization.Locale) http.HandlerFunc {
@@ -219,38 +212,30 @@ func indexHandler(deps *Dependencies, locales []localization.Locale) http.Handle
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		reqLocale := localization.LocaleFromContext(r.Context())
+		reqQuery := r.URL.Query().Get("q")
 
 		index := indexes[reqLocale.Tag]
-		query := r.URL.Query().Get("q")
-		results := slices.Collect(index.Search(query))
 
-		// Add cache breaker to thumbnails.
-		for _, result := range results {
-			result.Thumbnail = version(deps.ContentRoot, result.Thumbnail)
+		results := make([]*posts.IndexedPost, 0)
+		for result := range index.Search(reqQuery) {
+			if len(locales) != 0 {
+				result.Path = "/" + path.Join(reqLocale.Tag, result.Path)
+			}
+
+			if result.Thumbnail != "" {
+				root := deps.ContentRoot
+				postPath := path.Dir(result.Path)
+				thumbnail := web.VersionURL(root, postPath, result.Thumbnail)
+				result.Thumbnail = path.Join(postPath, thumbnail)
+			}
+
+			results = append(results, result)
 		}
 
 		response := web.NewResponse(w, r)
 		response.View(deps.IndexTemplate, deps.ViewModels.Create(r, SearchResults{
-			Query:   query,
+			Query:   reqQuery,
 			Results: results,
 		}))
 	}
-}
-
-func version(contentRoot *os.Root, contentURL string) string {
-	parsed, err := url.Parse(contentURL)
-	if err != nil || parsed.IsAbs() {
-		return contentURL
-	}
-
-	info, err := contentRoot.Stat(parsed.Path)
-	if err != nil {
-		return contentURL
-	}
-
-	query := parsed.Query()
-	query.Set("v", strconv.FormatInt(info.ModTime().Unix(), 16))
-	parsed.RawQuery = query.Encode()
-
-	return parsed.String()
 }

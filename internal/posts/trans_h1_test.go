@@ -3,7 +3,6 @@ package posts_test
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/subtributary/musings/internal/posts"
 )
@@ -57,13 +56,13 @@ func TestRemoveH1Transformer(t *testing.T) {
 		},
 	}
 
-	modTime := func(string) (time.Time, bool) { return time.Time{}, false }
+	versionURL := func(_, name string) string { return name }
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			parser := posts.NewParser(modTime)
+			parser := posts.NewParser(versionURL)
 			post, err := parser.ParseContent("", []byte(tt.content))
 			if err != nil {
 				t.Fatalf("error parsing content: %v", err)
