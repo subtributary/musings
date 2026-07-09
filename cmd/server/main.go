@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"flag"
 	"fmt"
 	"html/template"
 	"io/fs"
@@ -104,7 +105,13 @@ func (d *Dependencies) Close() error {
 func main() {
 	cfg, err := LoadConfig()
 	if err != nil {
-		// LoadConfig already prints a friendly error message, so just return.
+		if errors.Is(err, flag.ErrHelp) {
+			PrintUsage()
+		} else if argsErr, ok := ToArgsError(err); ok {
+			PrintArgsErr(argsErr)
+		} else {
+			log.Fatalf("Error: load config: %v", err)
+		}
 		return
 	}
 

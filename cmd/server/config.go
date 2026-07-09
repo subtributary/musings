@@ -18,18 +18,25 @@ const (
 	DefaultBindAddress = ":8080"
 )
 
-type ConfigArgs struct {
-	BindAddress string
+type ArgsError struct {
+	Err error
 }
 
-type ConfigFile struct {
-	// todo: default this to [Und] if not set.
-	Locales []localization.Locale `json:"locales"`
+func (e ArgsError) Error() string {
+	return e.Error()
+}
+
+func ToArgsError(err error) (ArgsError, bool) {
+	var cmdErr *ArgsError
+	if errors.As(err, &cmdErr) {
+		return *cmdErr, true
+	}
+	return ArgsError{}, false
 }
 
 type Config struct {
-	ConfigFile
-	ConfigArgs
+	BindAddress string
+	Locales     []localization.Locale `json:"locales"`
 }
 
 // LoadConfig loads all the configurations needed by the application.
@@ -38,57 +45,17 @@ type Config struct {
 //
 // If an error occurs, a friendly error message is output to the console.
 func LoadConfig() (cfg Config, err error) {
-	cfg.ConfigFile, err = loadConfigFile()
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Error loading config file: %v\n", err)
-		return
-	}
-
-	cfg.ConfigArgs, err = ArgsParser{
-		Stdout:      os.Stdout,
-		Stderr:      os.Stderr,
-		ProgramName: os.Args[0],
-		Getenv:      os.Getenv,
-	}.Parse(os.Args[1:])
-	return
-}
-
-// loadConfigFile loads and parses the project config in "data/config.json".
-func loadConfigFile() (ConfigFile, error) {
-	path := filepath.Join(DataPath, "config.json")
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return ConfigFile{}, fmt.Errorf("read config file: %w", err)
-	}
-
-	var cfg ConfigFile
-	if err = json.Unmarshal(contents, &cfg); err != nil {
-		return cfg, fmt.Errorf("parse config file: %w", err)
-	}
-
-	return cfg, nil
-}
-
-// ArgsParser is for parsing program arguments and environment variables into a
-// ConfigArgs. The program arguments are per-run configurations. They do not
-// include per-project configurations—those are stored in the config file.
-type ArgsParser struct {
-	Stdout      io.Writer
-	Stderr      io.Writer
-	ProgramName string
-	Getenv      func(string) string
-}
-
-// Parse parses arguments into a ConfigArgs.
-// The args passed must start after the program name.
-//
-// If an error occurs, a friendly error message is output.
-func (p ArgsParser) Parse(args []string) (ConfigArgs, error) {
-	var cfg ConfigArgs
-
 	cfg.BindAddress = DefaultBindAddress
-	if v := p.Getenv("MUSINGS_BIND"); v != "" {
-		cfg.BindAddress = v
+
+	configPath := filepath.Join(DataPath, "config.json")
+	if contents, err := os.ReadFile(configPath); err != nil {
+		return Config{}, fmt.Errorf("read config file: %w", err)
+	} else if err := json.Unmarshal(contents, &cfg); err != nil {
+		return Config{}, fmt.Errorf("parse config file: %w", err)
+	}
+
+	if value := os.Getenv("MUSINGS_BIND"); value != "" {
+		cfg.BindAddress = value
 	}
 
 	var fs flag.FlagSet
@@ -96,30 +63,28 @@ func (p ArgsParser) Parse(args []string) (ConfigArgs, error) {
 	fs.SetOutput(io.Discard)
 	fs.Usage = func() {}
 
-	err := fs.Parse(args)
-	switch {
-	case errors.Is(err, flag.ErrHelp):
-		p.printUsage()
-	case err != nil:
-		p.printArgsErr(err)
-	case fs.NArg() > 0:
-		extraArg := fs.Arg(0)
-		err = fmt.Errorf("unexpected positional argument: %s", extraArg)
-		p.printArgsErr(err)
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		return Config{}, ArgsError{Err: err}
+	} else if fs.NArg() > 0 {
+		err := fmt.Errorf("unexpected positional argument: %s", fs.Arg(0))
+		return Config{}, ArgsError{Err: err}
 	}
-	return cfg, err
+
+	return cfg, nil
 }
 
-func (p ArgsParser) printArgsErr(err error) {
-	_, _ = fmt.Fprintf(p.Stderr, "Error: %v\n", err)
-	_, _ = fmt.Fprintf(p.Stderr, "For usage, run: %s --help\n", p.ProgramName)
+func PrintArgsErr(err error) {
+	programName := os.Args[0]
+	_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	_, _ = fmt.Fprintf(os.Stderr, "For usage, run: %s --help\n", programName)
 }
 
-func (p ArgsParser) printUsage() {
-	_, _ = fmt.Fprintln(p.Stdout, "Musings website server.")
-	_, _ = fmt.Fprintln(p.Stdout)
-	_, _ = fmt.Fprintf(p.Stdout, "Usage: %s [options]", p.ProgramName)
-	_, _ = fmt.Fprintln(p.Stdout)
-	_, _ = fmt.Fprintln(p.Stdout, "Options:")
-	_, _ = fmt.Fprintf(p.Stdout, "  --bind <address>  Web endpoint to listen at. [default: %s]\n", DefaultBindAddress)
+func PrintUsage() {
+	programName := os.Args[0]
+	_, _ = fmt.Fprintln(os.Stdout, "Musings website server.")
+	_, _ = fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintf(os.Stdout, "Usage: %s [options]", programName)
+	_, _ = fmt.Fprintln(os.Stdout)
+	_, _ = fmt.Fprintln(os.Stdout, "Options:")
+	_, _ = fmt.Fprintf(os.Stdout, "  --bind <address>  Web endpoint to listen at. [default: %s]\n", DefaultBindAddress)
 }

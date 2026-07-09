@@ -18,7 +18,7 @@ const (
 	fieldContent = "content"
 
 	metadataBylines   = "bylines"
-	metadataPath      = "url"
+	metadataPath      = "path"
 	metadataPublished = "published"
 	metadataSummary   = "summary"
 	metadataThumbnail = "thumbnail"
