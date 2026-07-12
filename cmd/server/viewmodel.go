@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/subtributary/musings/internal/app"
 	"github.com/subtributary/musings/internal/localization"
 )
 
@@ -34,7 +35,7 @@ type ViewModelFactory struct {
 }
 
 func NewModelViewFactory(locales []localization.Locale) (*ViewModelFactory, error) {
-	translations, err := localization.NewStore(DataPath)
+	translations, err := localization.NewStore(app.DataPath)
 	if err != nil {
 		return nil, fmt.Errorf("load translations: %w", err)
 	}

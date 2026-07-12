@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"embed"
 	"errors"
 	"flag"
@@ -11,14 +10,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
 	"path"
 	"strings"
-	"syscall"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/subtributary/musings/internal/app"
 	"github.com/subtributary/musings/internal/localization"
 	"github.com/subtributary/musings/internal/posts"
 	"github.com/subtributary/musings/internal/web"
@@ -43,18 +40,9 @@ type Dependencies struct {
 
 func LoadDependencies(cfg Config) (*Dependencies, error) {
 	deps := &Dependencies{}
+	var err error
 
-	templateFS, err := fs.Sub(templateFiles, "templates")
-	if err != nil {
-		return nil, fmt.Errorf("sub embedded template dir: %w", err)
-	}
-
-	deps.WebFS, err = fs.Sub(webFiles, "web")
-	if err != nil {
-		return nil, fmt.Errorf("sub embedded web files: %w", err)
-	}
-
-	deps.ContentRoot, err = os.OpenRoot(ContentPath)
+	deps.ContentRoot, err = os.OpenRoot(app.ContentPath)
 	if err != nil {
 		return nil, fmt.Errorf("open content root: %w", err)
 	}
@@ -62,6 +50,16 @@ func LoadDependencies(cfg Config) (*Dependencies, error) {
 	deps.ViewModels, err = NewModelViewFactory(cfg.Locales)
 	if err != nil {
 		return nil, fmt.Errorf("create view model factory: %v", err)
+	}
+
+	deps.WebFS, err = fs.Sub(webFiles, "web")
+	if err != nil {
+		return nil, fmt.Errorf("sub embedded web files: %w", err)
+	}
+
+	templateFS, err := fs.Sub(templateFiles, "templates")
+	if err != nil {
+		return nil, fmt.Errorf("sub embedded template dir: %w", err)
 	}
 
 	deps.Err404Template, err = template.ParseFS(templateFS, "*.gohtml")
@@ -107,7 +105,7 @@ func main() {
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			PrintUsage()
-		} else if argsErr, ok := ToArgsError(err); ok {
+		} else if argsErr, ok := app.AsArgsError(err); ok {
 			PrintArgsErr(argsErr)
 		} else {
 			log.Fatalf("Error: load config: %v", err)
@@ -130,34 +128,14 @@ func main() {
 	router.Handle("/_images/*", http.FileServerFS(deps.WebFS))
 	router.Get("/*", contentHandler(deps))
 
-	server := &http.Server{Addr: cfg.BindAddress, Handler: router}
-	serverErr := make(chan error, 1)
-	go func() {
-		err := server.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serverErr <- err
-		}
-	}()
-
+	server := app.StartServer(cfg.BindAddress, router)
 	log.Printf("Listening at %s\n", cfg.BindAddress)
-
-	// Listen for CTRL+C or other interrupt.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	select {
-	case <-ctx.Done():
-		log.Println("Shutting down server..")
-	case err := <-serverErr:
-		if err != nil {
-			log.Printf("Error from server: %v", err)
-		}
+	if err = server.Wait(); err != nil {
+		log.Printf("Error from server: %v", err)
 	}
 
-	log.Println("Shutting down server...")
-	stopCtx, stopStop := context.WithTimeout(context.Background(), 5*time.Second)
-	defer stopStop()
-	err = server.Shutdown(stopCtx) // Shutdown server before closing deps.
+	log.Println("Shutting down server.")
+	err = server.Close() // Shutdown server before closing deps.
 	err = errors.Join(err, deps.Close())
 	if err != nil {
 		log.Fatalf("Error shutting down server: %v", err)
@@ -209,7 +187,7 @@ func indexHandler(deps *Dependencies, locales []localization.Locale) http.Handle
 
 	indexes := make(map[string]posts.AutoIndex, len(locales))
 	for _, loc := range locales {
-		indexRoot := path.Join(ContentPath, loc.Tag)
+		indexRoot := path.Join(app.ContentPath, loc.Tag)
 		index, err := posts.NewAutoIndex(indexRoot)
 		if err != nil {
 			log.Fatalf("Error: load indexes: %v", err)
