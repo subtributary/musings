@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="{{.Locale.Tag}}" dir="{{.Locale.Direction}}" class="{{.Locale.WritingMode}}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>{{template "title" .}}</title>
+
+    <!-- favicons -->
+    <link rel="icon" type="image/png" href="/_images/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/_images/favicon.svg" />
+    <link rel="shortcut icon" href="/_images/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/_images/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Musings" />
+    <link rel="manifest" href="/_images/site.webmanifest" />
+
+    <link rel="stylesheet" href="/_css/default.css">
+</head>
+<body>
+
+<header id="main-header">
+    <div class="container">
+        <a href="{{.RootURL}}">
+            <img src="/_images/favicon.svg"
+                 alt="{{.Translations.Get "Website logo"}}"
+                 style="height:3rem; width:3rem;"
+            >
+        </a>
+
+        <div class="search-form">
+            <form action="{{.RootURL}}" method="get">
+                <label class="visually-hidden" for="search">
+                    {{.Translations.Get "Search"}}
+                </label>
+                <input id="search" name="q" type="search">
+            </form>
+        </div>
+
+        <div class="locale-switcher">
+            {{template "locales.gohtml" .}}
+        </div>
+    </div>
+</header>
+
+<main class="container">
+    {{template "content" .}}
+</main>
+
+</body>
+</html>

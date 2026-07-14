@@ -76,14 +76,14 @@ func TestParseContent(t *testing.T) {
 		},
 	}
 
-	modTime := func(string) (time.Time, bool) { return time.Time{}, false }
+	versionURL := func(_, name string) string { return name }
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			parser := posts.NewParser(modTime)
+			parser := posts.NewParser(versionURL)
 			post, err := parser.ParseContent("", []byte(tt.content))
 			if err != nil {
 				if tt.wantErr {

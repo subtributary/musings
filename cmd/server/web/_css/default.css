@@ -319,7 +319,7 @@ sup {
   width: auto;
 }
 
-.text-muted, .index-page article > .content > header > .metadata, .post-page .metadata {
+.text-muted, .article-index article > .content > header > .metadata, .full-post .metadata {
   color: var(--drip-color-text-muted);
 }
 
@@ -494,19 +494,19 @@ html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[ty
   font-family: "Noto Sans";
   font-style: normal;
   font-weight: 400;
-  src: url("/_static/fonts/noto/noto-sans-v42-latin-regular.woff2") format("woff2");
+  src: url("/_fonts/noto/noto-sans-v42-latin-regular.woff2") format("woff2");
 }
 @font-face {
   font-family: "Noto Sans Arabic";
   font-style: normal;
   font-weight: 400;
-  src: url("/_static/fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2") format("woff2");
+  src: url("/_fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2") format("woff2");
 }
 @font-face {
   font-family: "Noto Sans Mongolian";
   font-style: normal;
   font-weight: 400;
-  src: url("/_static/fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2") format("woff2");
+  src: url("/_fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2") format("woff2");
 }
 :root[lang=en], .script-en {
   font-family: "Noto Sans", sans-serif;
@@ -548,23 +548,23 @@ html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[ty
   padding: 0;
 }
 
-.index-page .article-link {
+.article-index .article-link {
   color: inherit;
   overflow-wrap: normal;
   text-decoration: none;
   white-space: wrap;
 }
-.index-page .article-link h2 {
+.article-index .article-link h2 {
   color: var(--drip-color-link);
 }
-.index-page .article-link:hover h2 {
+.article-index .article-link:hover h2 {
   text-decoration: underline;
   text-underline-position: under;
 }
-.index-page .article-link:visited h2 {
+.article-index .article-link:visited h2 {
   color: var(--drip-color-link-visited);
 }
-.index-page article {
+.article-index article {
   display: flex;
   flex-wrap: wrap;
   border: 1px solid var(--drip-color-border);
@@ -573,34 +573,34 @@ html[dir=rtl].sideways-lr input[type=search], html[dir=rtl].sideways-rl input[ty
   gap: 1px;
   overflow: hidden;
 }
-.index-page article > .content {
+.article-index article > .content {
   background: var(--drip-color-background);
   padding: var(--drip-spacing);
   inline-size: 40ch;
   flex: 1 1 40ch;
 }
-.index-page article > .content h2, .index-page article > .content p {
+.article-index article > .content h2, .article-index article > .content p {
   font-size: inherit;
   line-height: inherit;
   margin: 0;
 }
-.index-page article > .content > header > .metadata {
+.article-index article > .content > header > .metadata {
   flex: 0 0 auto;
 }
-.index-page article > .thumbnail {
+.article-index article > .thumbnail {
   background: var(--drip-color-background);
   flex: 1 1 auto;
   inline-size: 15ch;
 }
-.index-page article > .thumbnail > img {
+.article-index article > .thumbnail > img {
   aspect-ratio: 1;
   inline-size: 100%;
 }
 
-.post-page h2 {
+.full-post h2 {
   border-block-end: 1px solid var(--drip-color-border);
 }
-.post-page article > header {
+.full-post article > header {
   border-block-end: 1px solid var(--drip-color-border);
   padding-block-end: var(--drip-spacing);
 }

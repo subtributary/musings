@@ -2,21 +2,21 @@
   font-family: 'Noto Sans';
   font-style: normal;
   font-weight: 400;
-  src: url('/_static/fonts/noto/noto-sans-v42-latin-regular.woff2') format('woff2');
+  src: url('/_fonts/noto/noto-sans-v42-latin-regular.woff2') format('woff2');
 }
 
 @font-face {
   font-family: 'Noto Sans Arabic';
   font-style: normal;
   font-weight: 400;
-  src: url('/_static/fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2') format('woff2');
+  src: url('/_fonts/noto/noto-sans-arabic-v33-arabic-regular.woff2') format('woff2');
 }
 
 @font-face {
   font-family: 'Noto Sans Mongolian';
   font-style: normal;
   font-weight: 400;
-  src: url('/_static/fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2') format('woff2');
+  src: url('/_fonts/noto/noto-sans-mongolian-v23-mongolian-regular.woff2') format('woff2');
 }
 
 :root[lang=en], .script-en {

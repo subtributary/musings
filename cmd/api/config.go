@@ -9,7 +9,7 @@ import (
 	"github.com/subtributary/musings/internal/app"
 )
 
-const DefaultBindAddress = ":8080"
+const DefaultBindAddress = ":8081"
 
 type Config struct {
 	app.ConfigFile
@@ -54,7 +54,7 @@ func PrintArgsErr(err error) {
 
 func PrintUsage() {
 	programName := os.Args[0]
-	_, _ = fmt.Fprintln(os.Stdout, "Musings website server.")
+	_, _ = fmt.Fprintln(os.Stdout, "Musings website CMS.")
 	_, _ = fmt.Fprintln(os.Stdout)
 	_, _ = fmt.Fprintf(os.Stdout, "Usage: %s [options]", programName)
 	_, _ = fmt.Fprintln(os.Stdout)

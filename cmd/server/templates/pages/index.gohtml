@@ -1,0 +1,37 @@
+{{define "title"}}Musings{{end}}
+{{define "content"}}
+    <script>
+        document.getElementById("search").value = {{.Data.Query}}
+    </script>
+
+    <div class="article-index">
+        {{if eq (len .Data.Results) 0}}
+            <article>
+                {{.Translations.Get "Zero matches"}}
+            </article>
+        {{end}}
+
+        {{range .Data.Results}}
+            <a href="{{.Path}}" class="article-link">
+                <article>
+                    <div class="thumbnail">
+                        {{if ne (len .Thumbnail) 0}}
+                            <img alt="" src="{{.Thumbnail}}">
+                        {{end}}
+                    </div>
+                    <div class="content">
+                        <header class="row">
+                            <h2>{{.Title}}</h2>
+                            <div class="metadata">
+                                {{if not .Published.IsZero}}
+                                    {{$.FormatDate .Published}}
+                                {{end}}
+                            </div>
+                        </header>
+                        <p>{{.Summary}}</p>
+                    </div>
+                </article>
+            </a>
+        {{end}}
+    </div>
+{{end}}

@@ -4,9 +4,7 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"iter"
-	"path"
 	"slices"
 	"strings"
 	"time"
@@ -45,61 +43,27 @@ type Index struct {
 // NewIndex creates an empty index ready to be populated.
 // Once the initial population is done, call MakeThreadSafe.
 func NewIndex() *Index {
-	s := &Index{
-		ranker:    bm25f.New(),
+	ranker := bm25f.New()
+	// Errors are ignored because they only happen for weight < 0.
+	_ = ranker.SetWeight(fieldTitle, 5.0)
+	_ = ranker.SetWeight(fieldContent, 1.0)
+
+	return &Index{
+		ranker:    ranker,
 		corpus:    bm25f.NewSimpleCorpus(),
 		tokenizer: tokens.NewDefaultTokenizer(),
 	}
-
-	// Errors are ignored because they only happen for weight < 0.
-	_ = s.ranker.SetWeight(fieldTitle, 5.0)
-	_ = s.ranker.SetWeight(fieldContent, 1.0)
-
-	return s
 }
 
-// BuildIndex builds an entirely new index.
-func BuildIndex(contentRoot fs.FS) (*Index, error) {
-	index := NewIndex()
-
-	// Ignore modtime of linked assets because it isn't needed for indexing.
-	modTime := func(string) (_ time.Time, _ bool) { return }
-	parser := NewParser(modTime)
-
-	err := fs.WalkDir(contentRoot, ".", func(filePath string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !d.Type().IsRegular() || path.Ext(d.Name()) != ".md" {
-			return nil
-		}
-
-		post, err := parser.ParseFile(contentRoot, filePath)
-		if err != nil {
-			return fmt.Errorf("parse post %q: %w", filePath, err)
-		}
-
-		index.Upsert(filePath, post)
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return index, nil
-}
-
-// List lists all posts in order of publication with the most recent one first.
+// List lists all posts in descending order of publication date.
 // Posts with publication dates in the future are omitted.
-func (idx *Index) List() iter.Seq[IndexedPost] {
-	var results []IndexedPost
+func (idx *Index) List() iter.Seq[*IndexedPost] {
+	var results []*IndexedPost
 	for _, doc := range idx.corpus.Documents() {
 		results = append(results, docToPost(doc))
 	}
 
-	slices.SortFunc(results, func(a, b IndexedPost) int {
+	slices.SortFunc(results, func(a, b *IndexedPost) int {
 		// compareTimes parameters are reversed to sort descending.
 		if c := b.Published.Compare(a.Published); c != 0 {
 			return c
@@ -112,7 +76,7 @@ func (idx *Index) List() iter.Seq[IndexedPost] {
 
 	now := time.Now()
 
-	return func(yield func(p IndexedPost) bool) {
+	return func(yield func(p *IndexedPost) bool) {
 		for _, post := range results {
 			if post.Published.After(now) {
 				continue
@@ -138,14 +102,14 @@ func (idx *Index) MakeConcurrent() error {
 }
 
 // Remove removes a post from the index.
-func (idx *Index) Remove(path string) {
-	idx.corpus.Remove(path)
+func (idx *Index) Remove(name string) {
+	idx.corpus.Remove(name)
 }
 
 // Search returns the posts matching the query,
 // sorted by match score with the best match first.
 // Posts with publication dates in the future are omitted.
-func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
+func (idx *Index) Search(query string) iter.Seq[*IndexedPost] {
 	if strings.TrimSpace(query) == "" {
 		return idx.List()
 	}
@@ -166,7 +130,7 @@ func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 
 	now := time.Now()
 
-	return func(yield func(p IndexedPost) bool) {
+	return func(yield func(p *IndexedPost) bool) {
 		for _, result := range scores {
 			post := docToPost(result.Document)
 			if post.Published.After(now) {
@@ -180,7 +144,7 @@ func (idx *Index) Search(query string) iter.Seq[IndexedPost] {
 }
 
 // Upsert adds a post to the index.
-func (idx *Index) Upsert(name string, post ParsedPost) {
+func (idx *Index) Upsert(name string, post *ParsedPost) {
 	routePath := strings.TrimSuffix(name, ".md")
 
 	bylines, _ := json.Marshal(post.Bylines)
@@ -192,11 +156,6 @@ func (idx *Index) Upsert(name string, post ParsedPost) {
 		published = post.Published.Format(time.RFC3339)
 	}
 
-	var thumbnail string
-	if post.Thumbnail != "" {
-		thumbnail = path.Join(path.Dir(name), post.Thumbnail)
-	}
-
 	idx.corpus.Upsert(routePath, bm25f.NewDocument(
 		bm25f.WithField(fieldTitle, title),
 		bm25f.WithField(fieldContent, content),
@@ -204,14 +163,16 @@ func (idx *Index) Upsert(name string, post ParsedPost) {
 		bm25f.WithMetadata(metadataPath, routePath),
 		bm25f.WithMetadata(metadataPublished, published),
 		bm25f.WithMetadata(metadataSummary, post.Summary),
-		bm25f.WithMetadata(metadataThumbnail, thumbnail),
+		bm25f.WithMetadata(metadataThumbnail, post.Thumbnail),
 		bm25f.WithMetadata(metadataTitle, post.Title),
 	))
 }
 
 // docToPost converts a bm25f.Document to an IndexedPost.
-// Missing or malformed metadata is degrated to zero values.
-func docToPost(doc *bm25f.Document) (p IndexedPost) {
+// Missing or malformed metadata is degraded to zero values.
+func docToPost(doc *bm25f.Document) *IndexedPost {
+	p := &IndexedPost{}
+
 	p.Path, _ = doc.Metadata(metadataPath)
 	p.Summary, _ = doc.Metadata(metadataSummary)
 	p.Thumbnail, _ = doc.Metadata(metadataThumbnail)
