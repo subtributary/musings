@@ -1,11 +1,9 @@
 package main
 
 import (
-	"embed"
 	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
@@ -15,19 +13,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/subtributary/musings/internal/app"
 	"github.com/subtributary/musings/internal/localization"
+	"github.com/subtributary/musings/internal/web"
 )
-
-//go:embed all:templates
-var templateFiles embed.FS
-
-//go:embed all:web
-var webFiles embed.FS
 
 type Dependencies struct {
 	ContentRoot *os.Root
-	WebFS       fs.FS
-
-	IndexTemplate *template.Template
 }
 
 func LoadDependencies() (*Dependencies, error) {
@@ -37,21 +27,6 @@ func LoadDependencies() (*Dependencies, error) {
 	deps.ContentRoot, err = os.OpenRoot(app.ContentPath)
 	if err != nil {
 		return nil, fmt.Errorf("open content root: %w", err)
-	}
-
-	deps.WebFS, err = fs.Sub(webFiles, "web")
-	if err != nil {
-		return nil, fmt.Errorf("sub embedded web files: %w", err)
-	}
-
-	templateFS, err := fs.Sub(templateFiles, "templates")
-	if err != nil {
-		return nil, fmt.Errorf("sub embedded template dir: %w", err)
-	}
-
-	deps.IndexTemplate, err = template.ParseFS(templateFS, "index.gohtml")
-	if err != nil {
-		return nil, fmt.Errorf("load index template: %w", err)
 	}
 
 	return deps, nil
@@ -84,7 +59,8 @@ func main() {
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Use(localization.LocalizedRoute(cfg.Locales))
-	router.Handle("/*", http.FileServerFS(deps.WebFS))
+	router.Get("/files", filesGetHandler(deps))
+	router.Get("/files/*", filesGetHandler(deps))
 
 	server := app.StartServer(cfg.BindAddress, router)
 	log.Printf("Listening at %s\n", cfg.BindAddress)
@@ -100,4 +76,19 @@ func main() {
 	}
 
 	log.Printf("Server stopped.")
+}
+
+func filesGetHandler(deps *Dependencies) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		filePath := chi.URLParam(r, "*")
+		response := web.NewResponse(w, r)
+
+		files, err := fs.ReadDir(deps.ContentRoot.FS(), ".")
+		if err != nil {
+			response.ServerError(err)
+			return
+		}
+
+		//
+	}
 }
