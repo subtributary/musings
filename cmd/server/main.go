@@ -151,7 +151,7 @@ func contentHandler(deps *Dependencies) http.HandlerFunc {
 	parser := posts.NewParser(versionURL)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		response := web.NewResponse(w, r)
+		response := web.NewViewResponse(w, r)
 		filePath, _ := strings.CutPrefix(r.URL.Path, "/")
 
 		// If no error, it is a regular file and not a post.
@@ -161,7 +161,8 @@ func contentHandler(deps *Dependencies) http.HandlerFunc {
 		}
 
 		if _, err := deps.ContentRoot.Stat(filePath + ".md"); err != nil {
-			response.NotFound(deps.Err404Template, deps.ViewModels.Create(r, nil))
+			vm := deps.ViewModels.Create(r, nil)
+			response.NotFound(deps.Err404Template, vm)
 			return
 		}
 
@@ -171,7 +172,8 @@ func contentHandler(deps *Dependencies) http.HandlerFunc {
 			return
 		}
 
-		response.View(deps.PostTemplate, deps.ViewModels.Create(r, post))
+		vm := deps.ViewModels.Create(r, post)
+		response.Okay(deps.PostTemplate, vm)
 	}
 }
 
@@ -217,10 +219,11 @@ func indexHandler(deps *Dependencies, locales []localization.Locale) http.Handle
 			results = append(results, result)
 		}
 
-		response := web.NewResponse(w, r)
-		response.View(deps.IndexTemplate, deps.ViewModels.Create(r, SearchResults{
+		response := web.NewViewResponse(w, r)
+		vm := deps.ViewModels.Create(r, SearchResults{
 			Query:   reqQuery,
 			Results: results,
-		}))
+		})
+		response.Okay(deps.IndexTemplate, vm)
 	}
 }

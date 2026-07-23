@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
@@ -14,7 +15,7 @@ type Response struct {
 	w http.ResponseWriter
 }
 
-func NewResponse(w http.ResponseWriter, r *http.Request) Response {
+func newResponse(w http.ResponseWriter, r *http.Request) Response {
 	return Response{r: r, w: w}
 }
 
@@ -22,9 +23,8 @@ func (r Response) File(root *os.Root, name string) {
 	http.ServeFileFS(r.w, r.r, root.FS(), name)
 }
 
-func (r Response) NotFound(notFoundTemplate *template.Template, viewModel any) {
-	r.w.WriteHeader(http.StatusNotFound)
-	r.View(notFoundTemplate, viewModel)
+func (r Response) NotFound() {
+	http.Error(r.w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 }
 
 func (r Response) ServerError(err error) {
@@ -32,7 +32,44 @@ func (r Response) ServerError(err error) {
 	http.Error(r.w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-func (r Response) View(tmpl *template.Template, viewModel any) {
+type JSONResponse struct {
+	Response
+}
+
+func NewJSONResponse(w http.ResponseWriter, r *http.Request) JSONResponse {
+	return JSONResponse{
+		Response: newResponse(w, r),
+	}
+}
+
+func (r JSONResponse) Okay(data any) {
+	r.w.Header().Set("Content-Type", "application/json")
+	err := json.NewEncoder(r.w).Encode(data)
+	if err != nil {
+		r.ServerError(err)
+	}
+}
+
+type ViewResponse struct {
+	Response
+}
+
+func NewViewResponse(w http.ResponseWriter, r *http.Request) ViewResponse {
+	return ViewResponse{
+		Response: newResponse(w, r),
+	}
+}
+
+func (r ViewResponse) Okay(tmpl *template.Template, data any) {
+	r.view(tmpl, data)
+}
+
+func (r ViewResponse) NotFound(tmpl *template.Template, data any) {
+	r.w.WriteHeader(http.StatusNotFound)
+	r.view(tmpl, data)
+}
+
+func (r ViewResponse) view(tmpl *template.Template, viewModel any) {
 	// Write to a buffer so that errors do not leave it partially written.
 	var buf bytes.Buffer
 	err := tmpl.Execute(&buf, viewModel)
