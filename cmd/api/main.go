@@ -8,11 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/subtributary/musings/internal/app"
+	"github.com/subtributary/musings/internal/posts"
 	"github.com/subtributary/musings/internal/web"
 )
 
@@ -64,9 +66,10 @@ func main() {
 	router := chi.NewRouter()
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
-	router.Get("/content", getContentHandler(deps))
-	router.Get("/content/*", getContentHandler(deps))
-	router.Get("/data/*", getDataHandler(deps))
+	router.Get("/content", contentGetHandler(deps))
+	router.Get("/content/*", contentGetHandler(deps))
+	router.Get("/data/*", dataGetHandler(deps))
+	router.Get("/index", indexGetHandler(deps))
 
 	server := app.StartServer(cfg.BindAddress, router)
 	log.Printf("Listening at %s\n", cfg.BindAddress)
@@ -84,29 +87,12 @@ func main() {
 	log.Printf("Server stopped.")
 }
 
-func getDataHandler(deps *Dependencies) http.HandlerFunc {
-	whitelist := []string{
-		"config.json",
-		"translations.json",
+func contentGetHandler(deps *Dependencies) http.HandlerFunc {
+	type ResponseItem struct {
+		IsDir bool   `json:"is_dir"`
+		Name  string `json:"name"`
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		name := chi.URLParam(r, "*")
-		if name == "" {
-			name = "."
-		}
-
-		response := web.NewJSONResponse(w, r)
-
-		if !slices.Contains(whitelist, name) {
-			response.NotFound()
-		}
-
-		response.File(deps.DataRoot, name)
-	}
-}
-
-func getContentHandler(deps *Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		name := chi.URLParam(r, "*")
 		if name == "" {
@@ -131,19 +117,68 @@ func getContentHandler(deps *Dependencies) http.HandlerFunc {
 			return
 		}
 
-		type Item struct {
-			IsDir bool   `json:"is_dir"`
-			Name  string `json:"name"`
-		}
-
-		items := make([]Item, len(files))
+		items := make([]ResponseItem, len(files))
 		for i, f := range files {
-			items[i] = Item{
+			items[i] = ResponseItem{
 				IsDir: f.IsDir(),
 				Name:  f.Name(),
 			}
 		}
 
 		response.Okay(items)
+	}
+}
+
+func dataGetHandler(deps *Dependencies) http.HandlerFunc {
+	whitelist := []string{
+		"config.json",
+		"translations.json",
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := chi.URLParam(r, "*")
+		if name == "" {
+			name = "."
+		}
+
+		response := web.NewJSONResponse(w, r)
+
+		if !slices.Contains(whitelist, name) {
+			response.NotFound()
+		}
+
+		response.File(deps.DataRoot, name)
+	}
+}
+
+func indexGetHandler(deps *Dependencies) http.HandlerFunc {
+	index, err := posts.NewAutoIndex(app.ContentPath)
+	if err != nil {
+		log.Fatalf("Error: load index: %v", err)
+	}
+
+	type ResponseModel struct {
+		Query   string               `json:"query"`
+		Results []*posts.IndexedPost `json:"results"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		model := ResponseModel{
+			Query:   r.URL.Query().Get("q"),
+			Results: make([]*posts.IndexedPost, 0),
+		}
+
+		for result := range index.Search(model.Query) {
+			if result.Thumbnail != "" {
+				postPath := path.Dir(result.Path)
+				thumbnail := web.VersionURL(deps.ContentRoot, postPath, result.Thumbnail)
+				result.Thumbnail = path.Join(postPath, thumbnail)
+			}
+
+			model.Results = append(model.Results, result)
+		}
+
+		response := web.NewJSONResponse(w, r)
+		response.Okay(model)
 	}
 }
