@@ -6,6 +6,7 @@
         <entryData>
           <resourceRoots>
             <path value="file://$PROJECT_DIR$/cmd/server/web" />
+            <path value="file://$PROJECT_DIR$/cmd/cms/web" />
           </resourceRoots>
         </entryData>
       </entry>

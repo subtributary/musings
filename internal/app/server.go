@@ -30,6 +30,8 @@ func StartServer(bind string, router http.Handler) *Server {
 			server.serverErr <- err
 		}
 	}()
+
+	return server
 }
 
 // Wait waits for error, ctl+C, or other interrupt.

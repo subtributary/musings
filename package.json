@@ -2,14 +2,16 @@
   "name": "musings-web-assets",
   "version": "0.1.0",
   "private": true,
-  "description": "Build pipeline for SCSS (and optional JS/TS later)",
+  "description": "Frontend asset build pipeline for Musings",
   "scripts": {
-    "build:server:css": "sass --load-path=node_modules cmd/server/web-src/scss:cmd/server/web/_css --no-source-map",
-    "build:server": "npm run build:server:css",
-    "build": "npm run build:server"
+    "dev": "vite",
+    "build:server": "tsc && vite build",
+    "build": "npm run build:cms && npm run build:server"
   },
   "devDependencies": {
     "@subtributary/drip": "^0.2.0",
-    "sass": "^1.77.0"
+    "sass": "^1.77.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.4"
   }
 }

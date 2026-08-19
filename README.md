@@ -1,4 +1,9 @@
 # Musings
+
+> [!NOTE]
+> Musings is currently being reorganized into multiple repos.
+> It probably won't work right until this move is complete.
+
 Musings is a publishing CMS focused on text-heavy content like blogs, stories, and news articles.
 It features first-class localization, markdown content, and a lightweight plugin mechanism.
 
