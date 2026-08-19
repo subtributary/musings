@@ -26,12 +26,12 @@ const (
 )
 
 type IndexedPost struct {
-	Path      string
-	Bylines   []string
-	Published time.Time
-	Summary   string
-	Thumbnail string
-	Title     string
+	Path      string    `json:"path"`
+	Bylines   []string  `json:"bylines"`
+	Published time.Time `json:"published"`
+	Summary   string    `json:"summary"`
+	Thumbnail string    `json:"thumbnail"`
+	Title     string    `json:"title"`
 }
 
 type Index struct {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/subtributary/musings/internal/app"
 	"github.com/subtributary/musings/internal/posts"
 	"github.com/subtributary/musings/internal/web"
@@ -64,6 +65,7 @@ func main() {
 	}
 
 	router := chi.NewRouter()
+	router.Use(cors.AllowAll().Handler)
 	router.Use(middleware.GetHead)
 	router.Use(middleware.Logger)
 	router.Get("/content", contentGetHandler(deps))
